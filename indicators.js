@@ -6,18 +6,33 @@ function renderDot(status) {
     return `<span class="inline-block w-2 h-2 rounded-full ${colorClass} ${blinkClass} ml-1"></span>`;
 }
 
+function renderPatternLabel(pattern) {
+    if (!pattern || pattern === 'NONE') return '';
+    
+    if (pattern === 'BULLISH HAMMER' || pattern === 'BULLISH ENGULFING') {
+        return `<span class="ml-1 px-1.5 py-0.5 text-[9px] font-black rounded border border-green-500 bg-green-950 text-green-400 animate-signal-blink">${pattern}</span>`;
+    }
+    
+    if (pattern === 'SHOOTING STAR' || pattern === 'BEARISH ENGULFING' || pattern === 'BEARISH BREAKDOWN') {
+        return `<span class="ml-1 px-1.5 py-0.5 text-[9px] font-black rounded border border-red-500 bg-red-950 text-red-400">${pattern}</span>`;
+    }
+
+    return '';
+}
+
 function renderPowerBoxes(signal, powerScore, candlePattern) {
     const score = powerScore || 5;
     const pct = score * 10;
     let boxColor = 'bg-gray-600', isBlink = false;
     let statusBadge = '';
 
-    // Logika Penentuan Badge ENTRY NOW & NO ENTRY
-    if (score >= 9 && candlePattern !== 'BEARISH_BREAKDOWN') {
+    const isBearish = ['SHOOTING STAR', 'BEARISH ENGULFING', 'BEARISH BREAKDOWN'].includes(candlePattern);
+
+    if (score >= 8 && !isBearish) {
         boxColor = 'bg-green-400';
         isBlink = true;
         statusBadge = `<span class="px-1.5 py-0.5 text-[9px] font-black rounded border border-green-400 bg-green-950 text-green-400 animate-signal-blink shadow-[0_0_8px_rgba(74,222,128,0.6)]">ENTRY</span>`;
-    } else if (score <= 4 || candlePattern === 'BEARISH_BREAKDOWN') {
+    } else if (score <= 4 || isBearish) {
         boxColor = 'bg-red-500';
         statusBadge = `<span class="px-1.5 py-0.5 text-[9px] font-black rounded border border-red-500 bg-red-950 text-red-400">NO ENTRY</span>`;
     } else {
@@ -32,10 +47,11 @@ function renderPowerBoxes(signal, powerScore, candlePattern) {
     boxesHtml += '</div>';
 
     return `
-        <div class="flex items-center gap-1.5">
+        <div class="flex flex-wrap items-center gap-1.5">
             <span class="text-[10px] font-bold text-gray-400">${pct}%</span>
             ${boxesHtml}
             ${statusBadge}
+            ${renderPatternLabel(candlePattern)}
         </div>
     `;
 }
