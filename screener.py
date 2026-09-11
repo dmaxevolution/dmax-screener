@@ -140,76 +140,129 @@ def analyze_candlestick(df, ema20, ema50):
   near_ema50 = abs(c_low - ema50) / ema50 <= 0.015
   at_support = near_ema20 or near_ema50
 
+  near_res_20 = abs(c_high - ema20) / ema20 <= 0.015
+  near_res_50 = abs(c_high - ema50) / ema50 <= 0.015
+  at_resistance = near_res_20 or near_res_50
+
   pattern_detected = 'NONE'
   score_modifier = 0
 
-  # 1. Bullish Hammer / Pinbar
-  if lower_shadow >= (1.8 * body) and upper_shadow <= (0.8 * body) and body > 0:
-    if at_support or c_close > ema20:
-      pattern_detected = 'BULLISH_HAMMER'
-      score_modifier = 2
-
-  # 2. Bullish Engulfing
+  if (
+      lower_shadow >= (1.8 * body)
+      and upper_shadow <= (0.8 * body)
+      and body > 0
+      and (at_support or c_close > ema20)
+  ):
+    pattern_detected = 'BULLISH HAMMER'
+    score_modifier = 3
   elif (
       p_close < p_open
       and c_close > c_open
       and c_close > p_open
       and c_open < p_close
+      and (at_support or c_close > ema20)
   ):
-    pattern_detected = 'BULLISH_ENGULFING'
-    score_modifier = 2
-
-  # 3. Bearish Breakdown
+    pattern_detected = 'BULLISH ENGULFING'
+    score_modifier = 3
+  elif (
+      upper_shadow >= (1.8 * body)
+      and lower_shadow <= (0.8 * body)
+      and body > 0
+      and (at_resistance or c_close < ema20)
+  ):
+    pattern_detected = 'SHOOTING STAR'
+    score_modifier = -3
+  elif (
+      p_close > p_open
+      and c_close < c_open
+      and c_open > p_close
+      and c_close < p_open
+  ):
+    pattern_detected = 'BEARISH ENGULFING'
+    score_modifier = -3
   elif c_close < c_open and (c_close < ema20 and c_close < ema50):
     if p_close >= ema20 or p_close >= ema50:
-      pattern_detected = 'BEARISH_BREAKDOWN'
-      score_modifier = -3
+      pattern_detected = 'BEARISH BREAKDOWN'
+      score_modifier = -4
 
   return pattern_detected, score_modifier
 
 
-def calculate_structural_levels(df, close, ema20):
-  """Menghitung Stop Loss dan Take Profit berdasarkan Support & Resistance (Struktural)"""
-  # 1. Support Level: Cari Low terendah 5 hari terakhir (Swing Low)
-  lowest_5d = df['Low'].tail(5).min()
+def calculate_structural_levels(df, close, ema20, candle_pattern):
+  latest = df.iloc[-1]
+  c_low = latest['Low']
 
-  # Gunakan level support terkuat antara Swing Low 5 hari atau EMA20
-  if close > ema20:
-    support_level = min(lowest_5d, ema20)
+  if candle_pattern in ['BULLISH HAMMER', 'BULLISH ENGULFING']:
+    support_level = min(c_low, ema20)
   else:
-    support_level = lowest_5d
+    support_level = min(df['Low'].tail(5).min(), ema20)
 
-  # Buffer SL 1% di bawah level support
   stop_loss = round(support_level * 0.99, 0)
 
-  # Batas aman (Safety Net): Cegah SL melebihi 7% dari harga close jika saham sangat volatil
-  max_sl_price = close * 0.93
-  if stop_loss < max_sl_price:
-    stop_loss = round(max_sl_price, 0)
+  if (close - stop_loss) / close > 0.07:
+    stop_loss = round(close * 0.93, 0)
 
-  # Mencegah SL di atas atau sama dengan Close
   if stop_loss >= close:
     stop_loss = round(close * 0.95, 0)
 
-  # 2. Resistance Level: Cari High tertinggi 20 hari terakhir (Swing High)
+  risk = close - stop_loss
   highest_20d = df['High'].tail(20).max()
 
-  # Target Profit 1 (TP1): Buffer 1% di bawah Resisten 20 Hari
-  if highest_20d > (close * 1.02):
+  tp1_rr2 = close + (risk * 2.0)
+  if highest_20d > tp1_rr2:
     take_profit_1 = round(highest_20d * 0.99, 0)
   else:
-    # Jika saham sedang Breakout / ATH (All-Time High), patok TP1 minimal +6%
-    take_profit_1 = round(close * 1.06, 0)
+    take_profit_1 = round(tp1_rr2, 0)
 
-  # 3. Target Profit 2 (TP2): Menggunakan Risk-to-Reward Ratio minimal 1:2 dari SL
-  risk = close - stop_loss
-  take_profit_2 = round(close + (risk * 2.0), 0)
+  take_profit_2 = round(close + (risk * 3.0), 0)
+  rrr_ratio = round((take_profit_1 - close) / risk, 2) if risk > 0 else 0
 
-  # Pastikan TP2 selalu lebih tinggi dari TP1
-  if take_profit_2 <= take_profit_1:
-    take_profit_2 = round(take_profit_1 * 1.05, 0)
+  return stop_loss, take_profit_1, take_profit_2, rrr_ratio
 
-  return stop_loss, take_profit_1, take_profit_2
+
+def calculate_safety_score(
+    category, close, ema20, ema50, rsi, candle_pattern, rrr_ratio, power_score
+):
+  """Menghitung skor keamanan objektif gabungan Fundamental + Teknikal (0 - 100)"""
+  safety = 0
+
+  # 1. BOBOT FUNDAMENTAL / KATEGORI (Maks 35 Poin)
+  if category == 'BLUECHIP':
+    safety += 35
+  elif category == 'GROWTH_SECOND_LINER':
+    safety += 28
+  elif category == 'TOP_MOVERS':
+    safety += 22
+  else:
+    safety += 18
+
+  # 2. BOBOT TEKNIKAL TREN & MA (Maks 25 Poin)
+  if close > ema20 and close > ema50:
+    safety += 25
+  elif close > ema20:
+    safety += 15
+  elif close > ema50:
+    safety += 10
+
+  # 3. BOBOT RSI (Maks 15 Poin) - Ideal di area 45-60
+  if 45 <= rsi <= 60:
+    safety += 15
+  elif 40 <= rsi <= 65:
+    safety += 10
+
+  # 4. BOBOT SINYAL & CANDLESTICK (Maks 15 Poin)
+  if candle_pattern in ['BULLISH HAMMER', 'BULLISH ENGULFING']:
+    safety += 15
+  elif candle_pattern == 'NONE':
+    safety += 5
+
+  # 5. BOBOT RISK TO REWARD (Maks 10 Poin)
+  if rrr_ratio >= 2.5:
+    safety += 10
+  elif rrr_ratio >= 1.8:
+    safety += 7
+
+  return min(100, safety)
 
 
 def process_ticker(ticker_symbol, primary_category):
@@ -236,11 +289,11 @@ def process_ticker(ticker_symbol, primary_category):
 
     candle_pattern, candle_score = analyze_candlestick(df, ema20, ema50)
 
-    # Hitung SL & TP berbasis Support & Resistance
-    stop_loss, take_profit_1, take_profit_2 = calculate_structural_levels(
-        df, close, ema20
+    stop_loss, take_profit_1, take_profit_2, rrr_ratio = (
+        calculate_structural_levels(df, close, ema20, candle_pattern)
     )
 
+    # Scoring Power (1-10)
     score = 5
     if close > ema20:
       score += 2
@@ -265,6 +318,17 @@ def process_ticker(ticker_symbol, primary_category):
     else:
       signal = 'NEUTRAL'
 
+    safety_score = calculate_safety_score(
+        primary_category,
+        close,
+        ema20,
+        ema50,
+        rsi,
+        candle_pattern,
+        rrr_ratio,
+        score,
+    )
+
     return {
         'ticker': clean_ticker,
         'category': primary_category,
@@ -283,12 +347,11 @@ def process_ticker(ticker_symbol, primary_category):
         ),
         'signal': signal,
         'power_score': score,
+        'safety_score': safety_score,
+        'rrr_ratio': rrr_ratio,
         'stop_loss': stop_loss,
         'take_profit_1': take_profit_1,
         'take_profit_2': take_profit_2,
-        'cl_hit': False,
-        'tp1_hit': False,
-        'tp2_hit': False,
     }
   except Exception:
     return None
@@ -318,33 +381,38 @@ def main():
   )[:20]
   top_bearish = sorted(all_results, key=lambda x: x['change_pct'])[:20]
 
-  entry_candidates = [
+  # DEDIKASI KANDIDAT SIAP ENTRY (SKOR 7, 8, DAN 9)
+  ready_to_entry_candidates = [
       x
       for x in all_results
-      if x['power_score'] >= 7
-      and 40 <= x['rsi'] <= 65
-      and x['candle_pattern'] != 'BEARISH_BREAKDOWN'
+      if x['power_score'] in [7, 8, 9]
+      and x['rrr_ratio'] >= 1.5
+      and x['candle_pattern']
+      not in ['BEARISH ENGULFING', 'SHOOTING STAR', 'BEARISH BREAKDOWN']
   ]
 
+  # PERANGKINGAN KEAMANAN (SAFETY SCORE) TINGGI KE RENDAH (Rank 1, 2, 3...)
+  ranked_ready_entry = sorted(
+      ready_to_entry_candidates,
+      key=lambda x: (x['safety_score'], x['power_score'], x['change_pct']),
+      reverse=True,
+  )
+
+  # TOP 10 ENTRY (Tetap untuk kompatibilitas UI Top 10)
   top_10_entry = sorted(
-      entry_candidates,
+      [x for x in all_results if x['power_score'] >= 8],
       key=lambda x: (x['power_score'], x['change_pct']),
       reverse=True,
   )[:10]
 
-  entry_now_list = [
-      x
-      for x in all_results
-      if x['power_score'] >= 9 and x['candle_pattern'] != 'BEARISH_BREAKDOWN'
-  ]
-
   output = {
       'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB'),
       'ihsg': fetch_ihsg(),
+      'ready_entry_ranked': ranked_ready_entry,
       'top_10_entry': top_10_entry,
-      'entry_now': entry_now_list,
+      'entry_now': ready_to_entry_candidates,
       'swing_setup': (
-          swing_setup if swing_setup else entry_candidates[:15]
+          swing_setup if swing_setup else ready_to_entry_candidates[:15]
       ),
       'top_gainers': top_gainers,
       'top_movers': top_movers,
