@@ -3,117 +3,95 @@ from datetime import datetime
 import pandas as pd
 import yfinance as yf
 
-# ==========================================
-# DAFTAR 110+ EMITEN IDX DENGAN MARKET CAP & FUNDAMENTAL LIKUID
-# ==========================================
 TICKERS_CONFIG = {
-    "BLUECHIP": [
-        "BBCA.JK",
-        "BBRI.JK",
-        "BMRI.JK",
-        "BBNI.JK",
-        "TLKM.JK",
-        "ASII.JK",
-        "UNVR.JK",
-        "ICBP.JK",
-        "INDF.JK",
-        "AMRT.JK",
-        "CPIN.JK",
-        "KLBF.JK",
-        "PGAS.JK",
-        "PTBA.JK",
-        "ADRO.JK",
-        "GOTO.JK",
-        "BRIS.JK",
-        "TCPI.JK",
-        "TPIA.JK",
-        "BREN.JK",
+    'BLUECHIP': [
+        'BBCA.JK',
+        'BBRI.JK',
+        'BMRI.JK',
+        'BBNI.JK',
+        'TLKM.JK',
+        'ASII.JK',
+        'UNVR.JK',
+        'ICBP.JK',
+        'INDF.JK',
+        'AMRT.JK',
+        'KLBF.JK',
+        'PGAS.JK',
+        'PTBA.JK',
+        'ADRO.JK',
+        'GOTO.JK',
+        'BRIS.JK',
+        'TPIA.JK',
+        'BREN.JK',
     ],
-    "TOP_MOVERS": [
-        "MDKA.JK",
-        "ANKR.JK",
-        "ANTM.JK",
-        "INCO.JK",
-        "HRUM.JK",
-        "MBMA.JK",
-        "NCKL.JK",
-        "MEDC.JK",
-        "AKRA.JK",
-        "BRPT.JK",
-        "INKP.JK",
-        "TKIM.JK",
-        "SMGR.JK",
-        "INTP.JK",
-        "UNTR.JK",
-        "ITMG.JK",
-        "CUAN.JK",
-        "AMMN.JK",
-        "ACES.JK",
-        "MYOR.JK",
+    'TOP_MOVERS': [
+        'MDKA.JK',
+        'ANTM.JK',
+        'INCO.JK',
+        'HRUM.JK',
+        'MBMA.JK',
+        'NCKL.JK',
+        'MEDC.JK',
+        'AKRA.JK',
+        'BRPT.JK',
+        'INKP.JK',
+        'TKIM.JK',
+        'SMGR.JK',
+        'INTP.JK',
+        'UNTR.JK',
+        'ITMG.JK',
+        'CUAN.JK',
+        'AMMN.JK',
+        'ACES.JK',
+        'MYOR.JK',
     ],
-    "SWING_SETUP": [
-        "AUTO.JK",
-        "GJTL.JK",
-        "BSDE.JK",
-        "CTRA.JK",
-        "PWON.JK",
-        "SMA3.JK",
-        "PANI.JK",
-        "MNCN.JK",
-        "SCMA.JK",
-        "EMTKA.JK",
-        "MAPI.JK",
-        "MAPA.JK",
-        "ERAA.JK",
-        "RALS.JK",
-        "FILM.JK",
-        "BIRD.JK",
-        "BLUE.JK",
-        "ELSA.JK",
-        "MARK.JK",
-        "AVIA.JK",
+    'SWING_SETUP': [
+        'AUTO.JK',
+        'GJTL.JK',
+        'BSDE.JK',
+        'CTRA.JK',
+        'PWON.JK',
+        'PANI.JK',
+        'MNCN.JK',
+        'SCMA.JK',
+        'EMTKA.JK',
+        'MAPI.JK',
+        'MAPA.JK',
+        'ERAA.JK',
+        'RALS.JK',
+        'FILM.JK',
+        'BIRD.JK',
+        'ELSA.JK',
+        'MARK.JK',
+        'AVIA.JK',
     ],
-    "GROWTH_SECOND_LINER": [
-        "CMRY.JK",
-        "HEAL.JK",
-        "MIKA.JK",
-        "SILO.JK",
-        "KAEF.JK",
-        "INAF.JK",
-        "SIDO.JK",
-        "CPRO.JK",
-        "JPFA.JK",
-        "MAIN.JK",
-        "TAPG.JK",
-        "LSIP.JK",
-        "AALI.JK",
-        "SIMP.JK",
-        "SSMS.JK",
-        "SMDR.JK",
-        "TEMAS.JK",
-        "BSSR.JK",
-        "TOBA.JK",
-        "INDY.JK",
-        "DOID.JK",
-        "MBSS.JK",
-        "PTRO.JK",
-        "ESSA.JK",
-        "ARTO.JK",
-        "BBHI.JK",
-        "BBYB.JK",
-        "BNGA.JK",
-        "BDMN.JK",
-        "PNBN.JK",
-        "BJBR.JK",
-        "BJTM.JK",
-        "NISP.JK",
-        "MEGA.JK",
-        "AGRO.JK",
-        "IRRA.JK",
-        "CLEO.JK",
-        "WOOD.JK",
-        "PPRE.JK",
-        "WEGE.JK",
+    'GROWTH_SECOND_LINER': [
+        'CMRY.JK',
+        'HEAL.JK',
+        'MIKA.JK',
+        'SILO.JK',
+        'SIDO.JK',
+        'JPFA.JK',
+        'MAIN.JK',
+        'TAPG.JK',
+        'LSIP.JK',
+        'AALI.JK',
+        'SMDR.JK',
+        'TEMAS.JK',
+        'BSSR.JK',
+        'TOBA.JK',
+        'INDY.JK',
+        'DOID.JK',
+        'PTRO.JK',
+        'ESSA.JK',
+        'ARTO.JK',
+        'BNGA.JK',
+        'BDMN.JK',
+        'PNBN.JK',
+        'BJBR.JK',
+        'BJTM.JK',
+        'NISP.JK',
+        'CLEO.JK',
     ],
 }
 
@@ -131,12 +109,9 @@ def fetch_ihsg():
     df = yf.Ticker('^JKSE').history(period='5d')
     if df.empty:
       return {}
-    latest = df.iloc[-1]
-    prev = df.iloc[-2]
-    close_val = round(latest['Close'], 2)
-    prev_val = round(prev['Close'], 2)
+    latest, prev = df.iloc[-1], df.iloc[-2]
+    close_val, prev_val = round(latest['Close'], 2), round(prev['Close'], 2)
     chg_pct = round(((close_val - prev_val) / prev_val) * 100, 2)
-
     return {
         'close': close_val,
         'prev_close': prev_val,
@@ -145,9 +120,52 @@ def fetch_ihsg():
         'low': round(latest['Low'], 2),
         'change_pct': chg_pct,
     }
-  except Exception as e:
-    print(f'Error fetch IHSG: {e}')
+  except Exception:
     return {}
+
+
+def analyze_candlestick(df, ema20, ema50):
+  latest = df.iloc[-1]
+  prev = df.iloc[-2]
+
+  c_open, c_close = latest['Open'], latest['Close']
+  c_high, c_low = latest['High'], latest['Low']
+  p_open, p_close = prev['Open'], prev['Close']
+
+  body = abs(c_close - c_open)
+  lower_shadow = min(c_open, c_close) - c_low
+  upper_shadow = c_high - max(c_open, c_close)
+
+  near_ema20 = abs(c_low - ema20) / ema20 <= 0.015
+  near_ema50 = abs(c_low - ema50) / ema50 <= 0.015
+  at_support = near_ema20 or near_ema50
+
+  pattern_detected = 'NONE'
+  score_modifier = 0
+
+  # 1. Bullish Hammer / Pinbar
+  if lower_shadow >= (1.8 * body) and upper_shadow <= (0.8 * body) and body > 0:
+    if at_support or c_close > ema20:
+      pattern_detected = 'BULLISH_HAMMER'
+      score_modifier = 2
+
+  # 2. Bullish Engulfing
+  elif (
+      p_close < p_open
+      and c_close > c_open
+      and c_close > p_open
+      and c_open < p_close
+  ):
+    pattern_detected = 'BULLISH_ENGULFING'
+    score_modifier = 2
+
+  # 3. Bearish Breakdown
+  elif c_close < c_open and (c_close < ema20 and c_close < ema50):
+    if p_close >= ema20 or p_close >= ema50:
+      pattern_detected = 'BEARISH_BREAKDOWN'
+      score_modifier = -3
+
+  return pattern_detected, score_modifier
 
 
 def process_ticker(ticker_symbol, primary_category):
@@ -160,37 +178,20 @@ def process_ticker(ticker_symbol, primary_category):
     df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
     df['RSI'] = calculate_rsi(df['Close'], 14)
 
-    latest = df.iloc[-1]
-    prev = df.iloc[-2]
-
-    close = round(latest['Close'], 0)
-    prev_close = round(prev['Close'], 0)
+    latest, prev = df.iloc[-1], df.iloc[-2]
+    close, prev_close = round(latest['Close'], 0), round(prev['Close'], 0)
     change_pct = round(((close - prev_close) / prev_close) * 100, 2)
 
-    ema20 = round(latest['EMA20'], 0)
-    ema50 = round(latest['EMA50'], 0)
+    ema20, ema50 = round(latest['EMA20'], 0), round(latest['EMA50'], 0)
     rsi = (
         round(latest['RSI'], 1)
         if not pd.isna(latest['RSI'])
         else 50.0
     )
-
     clean_ticker = ticker_symbol.replace('.JK', '')
 
-    # Penilaian Signal Power & Indikator
-    ema20_status = 'buy' if close > ema20 else 'sell'
-    ema50_status = 'buy' if close > ema50 else 'sell'
+    candle_pattern, candle_score = analyze_candlestick(df, ema20, ema50)
 
-    if rsi < 30:
-      rsi_status = 'strong_buy'
-    elif 30 <= rsi <= 60:
-      rsi_status = 'buy'
-    elif 60 < rsi <= 70:
-      rsi_status = 'neutral'
-    else:
-      rsi_status = 'sell'
-
-    # Power Score Calculation (1 - 10)
     score = 5
     if close > ema20:
       score += 2
@@ -201,8 +202,9 @@ def process_ticker(ticker_symbol, primary_category):
     if change_pct > 0:
       score += 1
     if close < ema20 and close < ema50:
-      score -= 3
+      score -= 2
 
+    score += candle_score
     score = max(1, min(10, score))
 
     if score >= 8:
@@ -214,11 +216,6 @@ def process_ticker(ticker_symbol, primary_category):
     else:
       signal = 'NEUTRAL'
 
-    # Level Entry, Stop Loss (5%), dan Take Profit (5% & 10%)
-    stop_loss = round(close * 0.95, 0)
-    tp1 = round(close * 1.05, 0)
-    tp2 = round(close * 1.10, 0)
-
     return {
         'ticker': clean_ticker,
         'category': primary_category,
@@ -227,33 +224,29 @@ def process_ticker(ticker_symbol, primary_category):
         'ema20': ema20,
         'ema50': ema50,
         'rsi': rsi,
-        'ema20_status': ema20_status,
-        'ema50_status': ema50_status,
-        'rsi_status': rsi_status,
+        'candle_pattern': candle_pattern,
+        'ema20_status': 'buy' if close > ema20 else 'sell',
+        'ema50_status': 'buy' if close > ema50 else 'sell',
+        'rsi_status': (
+            'strong_buy'
+            if rsi < 30
+            else ('buy' if rsi <= 60 else ('neutral' if rsi <= 70 else 'sell'))
+        ),
         'signal': signal,
         'power_score': score,
-        'stop_loss': stop_loss,
-        'take_profit_1': tp1,
-        'take_profit_2': tp2,
+        'stop_loss': round(close * 0.95, 0),
+        'take_profit_1': round(close * 1.05, 0),
+        'take_profit_2': round(close * 1.10, 0),
         'cl_hit': False,
         'tp1_hit': False,
         'tp2_hit': False,
     }
-  except Exception as e:
-    print(f'Error processing {ticker_symbol}: {e}')
+  except Exception:
     return None
 
 
 def main():
-  print('Memulai proses pemindaian bursa IHSG...')
-
-  all_results = []
-  bluechips = []
-  top_movers = []
-  swing_setup = []
-  top_gainers = []
-  top_bearish = []
-
+  all_results, bluechips, top_movers, swing_setup = [], [], [], []
   processed_tickers = set()
 
   for cat, tickers in TICKERS_CONFIG.items():
@@ -261,11 +254,9 @@ def main():
       if t in processed_tickers:
         continue
       processed_tickers.add(t)
-
       data = process_ticker(t, cat)
       if data:
         all_results.append(data)
-
         if cat == 'BLUECHIP':
           bluechips.append(data)
         elif cat == 'TOP_MOVERS':
@@ -273,31 +264,36 @@ def main():
         elif cat == 'SWING_SETUP':
           swing_setup.append(data)
 
-  # Klasifikasi Otomatis
   top_gainers = sorted(
       all_results, key=lambda x: x['change_pct'], reverse=True
   )[:20]
   top_bearish = sorted(all_results, key=lambda x: x['change_pct'])[:20]
 
-  # Filter Top 10 Best Entry Signal (Swing Setup Siap Beli)
   entry_candidates = [
       x
       for x in all_results
-      if x['power_score'] >= 7 and x['rsi'] >= 40 and x['rsi'] <= 65
+      if x['power_score'] >= 7
+      and 40 <= x['rsi'] <= 65
+      and x['candle_pattern'] != 'BEARISH_BREAKDOWN'
   ]
+
   top_10_entry = sorted(
       entry_candidates,
       key=lambda x: (x['power_score'], x['change_pct']),
       reverse=True,
   )[:10]
 
-  ihsg_data = fetch_ihsg()
-  now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
+  entry_now_list = [
+      x
+      for x in all_results
+      if x['power_score'] >= 9 and x['candle_pattern'] != 'BEARISH_BREAKDOWN'
+  ]
 
   output = {
-      'last_updated': now_str,
-      'ihsg': ihsg_data,
+      'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB'),
+      'ihsg': fetch_ihsg(),
       'top_10_entry': top_10_entry,
+      'entry_now': entry_now_list,
       'swing_setup': (
           swing_setup if swing_setup else entry_candidates[:15]
       ),
@@ -310,8 +306,6 @@ def main():
 
   with open('data.json', 'w') as f:
     json.dump(output, f, indent=2)
-
-  print('✅ Berhasil memperbarui data.json dengan emiten terfilter!')
 
 
 if __name__ == '__main__':
