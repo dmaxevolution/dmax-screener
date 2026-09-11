@@ -1,7 +1,9 @@
 function updateTabCounts() {
     ['entry_now', 'swing_setup', 'top_gainers', 'top_movers', 'bluechips', 'top_bearish', 'all_stocks'].forEach(cat => {
         const el = document.getElementById('count-' + cat);
-        if (el && globalData[cat]) el.innerText = globalData[cat].length;
+        if (el && globalData[cat]) {
+            el.innerText = globalData[cat].length;
+        }
     });
     const pEl = document.getElementById('count-pantauan');
     if (pEl) pEl.innerText = pantauanList.length;
@@ -15,7 +17,26 @@ function renderIHSG(ihsg) {
     if (pctEl) pctEl.innerText = `${ihsg.change_pct}%`;
 }
 
-// Render Top 10 Khusus Tampilan HP (Kartu Berwarna Emas/Kuning)
+function renderTop10Entry(items) {
+    const container = document.getElementById('top-10-data');
+    if (!container) return;
+    container.innerHTML = '';
+
+    (items || []).forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="py-2.5 px-3 font-bold text-green-400">#${index + 1}</td>
+            <td class="py-2.5 px-3 font-bold text-yellow-400">${item.ticker}</td>
+            <td class="py-2.5 px-3">Rp ${item.close.toLocaleString('id-ID')}</td>
+            <td class="py-2.5 px-3 ${item.change_pct >= 0 ? 'text-green-400' : 'text-red-400'}">${item.change_pct >= 0 ? '+' : ''}${item.change_pct}%</td>
+            <td class="py-2.5 px-3 text-center">${renderPowerBoxes(item.signal, item.power_score, item.candle_pattern)}</td>
+            <td class="py-2.5 px-3 text-red-400 font-semibold">${item.stop_loss}</td>
+            <td class="py-2.5 px-3 text-green-400 font-semibold">${item.take_profit_1} / ${item.take_profit_2}</td>
+        `;
+        container.appendChild(row);
+    });
+}
+
 function renderTop10EntryMobile(items) {
     const container = document.getElementById('top-10-mobile-cards');
     if (!container) return;
@@ -61,7 +82,13 @@ function renderDesktopTable(items) {
     const tbody = document.getElementById('screener-data-desktop');
     if (!tbody) return;
     tbody.innerHTML = '';
-    (items || []).forEach(item => {
+    
+    if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">Tidak ada data emiten untuk kategori ini.</td></tr>`;
+        return;
+    }
+
+    items.forEach(item => {
         const inPantauan = pantauanList.includes(item.ticker);
         const row = document.createElement('tr');
         row.id = 'row-' + item.ticker;
@@ -90,7 +117,13 @@ function renderMobileCards(items) {
     const container = document.getElementById('screener-data-mobile');
     if (!container) return;
     container.innerHTML = '';
-    (items || []).forEach(item => {
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-gray-500 bg-gray-900 rounded-xl">Tidak ada data emiten untuk kategori ini.</div>`;
+        return;
+    }
+
+    items.forEach(item => {
         const inPantauan = pantauanList.includes(item.ticker);
         const card = document.createElement('div');
         card.id = 'card-' + item.ticker;
@@ -120,12 +153,11 @@ function renderMobileCards(items) {
     });
 }
 
-// Fungsi Pencarian (Dukungan Blink & Scroll untuk Desktop + Mobile HP)
 function searchTicker(tickerQuery) {
     if (!tickerQuery) return;
     const cleanTicker = tickerQuery.toUpperCase().trim();
     
-    // Coba Cari di Tampilan Desktop
+    // Desktop Search & Scroll
     const desktopRow = document.getElementById('row-' + cleanTicker);
     if (desktopRow) {
         desktopRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -133,7 +165,7 @@ function searchTicker(tickerQuery) {
         setTimeout(() => desktopRow.classList.remove('bg-yellow-900/50', 'animate-pulse'), 3000);
     }
 
-    // Coba Cari di Tampilan Mobile Kartu
+    // Mobile Search & Scroll
     const mobileCard = document.getElementById('card-' + cleanTicker) || document.getElementById('card-top10-' + cleanTicker);
     if (mobileCard) {
         mobileCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -144,9 +176,7 @@ function searchTicker(tickerQuery) {
 
 function renderCurrentTab() {
     let data = [];
-    if (currentTab === 'entry_now') {
-        data = (globalData['top_10_entry'] || []).filter(x => x.power_score >= 9);
-    } else if (currentTab === 'pantauan') {
+    if (currentTab === 'pantauan') {
         data = getPantauanData();
     } else {
         data = globalData[currentTab] || [];
