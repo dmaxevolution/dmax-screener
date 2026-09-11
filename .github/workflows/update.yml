@@ -2,17 +2,19 @@ name: Automatic IDX Screener Update
 
 on:
   schedule:
-    # Jadwal Bursa Efek Indonesia (IHSG) - Waktu UTC (WIB - 7 Jam)
-    # Sesi 1: 08:45 - 12:30 WIB (01:45 - 05:30 UTC)
+    # Sesi 1 WIB: 08:45 - 12:30 (01:45 - 05:30 UTC)
     - cron: '45 1 * * 1-5'
     - cron: '0,15,30,45 2-4 * * 1-5'
     - cron: '0,15,30 5 * * 1-5'
     
-    # Sesi 2: 13:00 - 16:30 WIB (06:00 - 09:30 UTC)
+    # Sesi 2 WIB: 13:00 - 16:30 (06:00 - 09:30 UTC)
     - cron: '0,15,30,45 6-8 * * 1-5'
     - cron: '0,15,30 9 * * 1-5'
     
-  workflow_dispatch: # Supaya bisa di-trigger manual kapan saja dari tab GitHub Actions
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-and-run:
@@ -20,6 +22,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -31,22 +36,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install yfinance pandas requests
 
-      # Cek daftar file untuk memastikan screener.py terdeteksi
-      - name: Verify Directory Structure
-        run: |
-          echo "=== Memeriksa Keberadaan File ==="
-          ls -la
-
-      # Jalankan screener Python utama
       - name: Run Screener Engine
         run: python screener.py
 
-      # Simpan dan Unggah Perubahan data.json Secara Otomatis
       - name: Commit and Push Updated Data
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data.json
-          git status
-          git commit -m "Auto-update data.json [skip ci]" || exit 0
-          git push
+          
+          if git diff --staged --quiet; then
+            echo "Tidak ada perubahan data. Skip push."
+          else
+            git commit -m "Auto-update data.json [skip ci]"
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+            git push origin HEAD:main || git push origin HEAD:master
+          fi
