@@ -168,6 +168,50 @@ def analyze_candlestick(df, ema20, ema50):
   return pattern_detected, score_modifier
 
 
+def calculate_structural_levels(df, close, ema20):
+  """Menghitung Stop Loss dan Take Profit berdasarkan Support & Resistance (Struktural)"""
+  # 1. Support Level: Cari Low terendah 5 hari terakhir (Swing Low)
+  lowest_5d = df['Low'].tail(5).min()
+
+  # Gunakan level support terkuat antara Swing Low 5 hari atau EMA20
+  if close > ema20:
+    support_level = min(lowest_5d, ema20)
+  else:
+    support_level = lowest_5d
+
+  # Buffer SL 1% di bawah level support
+  stop_loss = round(support_level * 0.99, 0)
+
+  # Batas aman (Safety Net): Cegah SL melebihi 7% dari harga close jika saham sangat volatil
+  max_sl_price = close * 0.93
+  if stop_loss < max_sl_price:
+    stop_loss = round(max_sl_price, 0)
+
+  # Mencegah SL di atas atau sama dengan Close
+  if stop_loss >= close:
+    stop_loss = round(close * 0.95, 0)
+
+  # 2. Resistance Level: Cari High tertinggi 20 hari terakhir (Swing High)
+  highest_20d = df['High'].tail(20).max()
+
+  # Target Profit 1 (TP1): Buffer 1% di bawah Resisten 20 Hari
+  if highest_20d > (close * 1.02):
+    take_profit_1 = round(highest_20d * 0.99, 0)
+  else:
+    # Jika saham sedang Breakout / ATH (All-Time High), patok TP1 minimal +6%
+    take_profit_1 = round(close * 1.06, 0)
+
+  # 3. Target Profit 2 (TP2): Menggunakan Risk-to-Reward Ratio minimal 1:2 dari SL
+  risk = close - stop_loss
+  take_profit_2 = round(close + (risk * 2.0), 0)
+
+  # Pastikan TP2 selalu lebih tinggi dari TP1
+  if take_profit_2 <= take_profit_1:
+    take_profit_2 = round(take_profit_1 * 1.05, 0)
+
+  return stop_loss, take_profit_1, take_profit_2
+
+
 def process_ticker(ticker_symbol, primary_category):
   try:
     df = yf.Ticker(ticker_symbol).history(period='3mo')
@@ -191,6 +235,11 @@ def process_ticker(ticker_symbol, primary_category):
     clean_ticker = ticker_symbol.replace('.JK', '')
 
     candle_pattern, candle_score = analyze_candlestick(df, ema20, ema50)
+
+    # Hitung SL & TP berbasis Support & Resistance
+    stop_loss, take_profit_1, take_profit_2 = calculate_structural_levels(
+        df, close, ema20
+    )
 
     score = 5
     if close > ema20:
@@ -234,9 +283,9 @@ def process_ticker(ticker_symbol, primary_category):
         ),
         'signal': signal,
         'power_score': score,
-        'stop_loss': round(close * 0.95, 0),
-        'take_profit_1': round(close * 1.05, 0),
-        'take_profit_2': round(close * 1.10, 0),
+        'stop_loss': stop_loss,
+        'take_profit_1': take_profit_1,
+        'take_profit_2': take_profit_2,
         'cl_hit': False,
         'tp1_hit': False,
         'tp2_hit': False,
