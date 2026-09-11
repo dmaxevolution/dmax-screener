@@ -12,6 +12,7 @@ function renderPowerBoxes(signal, powerScore, candlePattern) {
     let boxColor = 'bg-gray-600', isBlink = false;
     let statusBadge = '';
 
+    // Logika Penentuan Badge ENTRY NOW & NO ENTRY
     if (score >= 9 && candlePattern !== 'BEARISH_BREAKDOWN') {
         boxColor = 'bg-green-400';
         isBlink = true;
