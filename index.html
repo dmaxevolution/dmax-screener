@@ -1,53 +1,160 @@
-/* ==========================================================================
-   STYLE KUSTOM UNTUK SCREENER SAHAM
-   ========================================================================== */
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screener Saham - Price Action & RRR</title>
+    
+    <!-- Framework Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- File CSS Kustom Anda (style.css) -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-/* Gaya Dasar Halaman */
-body {
-    background-color: #f8f9fa;
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
-    color: #333333;
-}
+    <!-- Header Navigation -->
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1 fw-bold">📈 Stock Price Action Screener</span>
+            <button class="btn btn-outline-light btn-sm px-3" onclick="loadScreenerData()">🔄 Refresh Data</button>
+        </div>
+    </nav>
 
-/* Desain Kartu Saham */
-.stock-card {
-    background-color: #ffffff;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+    <!-- Main Content Container -->
+    <div class="container">
+        <!-- Status Informasi -->
+        <div class="row mb-3 align-items-center">
+            <div class="col-md-6">
+                <p class="text-muted mb-0 fw-medium" id="status-info">Memuat data screener...</p>
+            </div>
+        </div>
 
-.stock-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
-}
+        <!-- Container Grid Kartu Saham -->
+        <div class="row" id="stock-container">
+            <!-- Kartu saham akan di-render secara otomatis oleh JS -->
+        </div>
+    </div>
 
-/* Badge Pola Candlestick */
-.badge-pattern {
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    padding: 6px 10px;
-    border-radius: 6px;
-}
+    <!-- JavaScript Engine -->
+    <script>
+        async function loadScreenerData() {
+            const container = document.getElementById('stock-container');
+            const statusInfo = document.getElementById('status-info');
+            
+            // Tampilan Loading Spinner
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Membaca data.json...</p>
+                </div>`;
 
-/* Kotak Trade Plan (RRR, Stop Loss & Take Profit) */
-.trade-plan-box {
-    background-color: #f8fafc;
-    border-left: 4px solid #0d6efd;
-    border-radius: 6px;
-}
+            try {
+                // Mengambil data dari data.json (ditambah timestamp agar tidak terkena cache browser)
+                const response = await fetch('data.json?t=' + new Date().getTime());
+                
+                if (!response.ok) {
+                    throw new Error('File data.json tidak ditemukan atau gagal dimuat.');
+                }
 
-/* Penyesuaian Ukuran Teks Khusus */
-.text-sm {
-    font-size: 0.85rem;
-}
+                const stocks = await response.json();
 
-/* Efek Transisi Button Refresh */
-.navbar .btn {
-    transition: all 0.2s ease-in-out;
-}
+                if (!stocks || stocks.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-warning text-center">Data kosong. Jalankan <code>python screener.py</code> terlebih dahulu.</div>
+                        </div>`;
+                    statusInfo.innerText = "Tidak ada saham yang ditemukan.";
+                    return;
+                }
 
-.navbar .btn:hover {
-    transform: rotate(180deg);
-}
+                statusInfo.innerText = `Menampilkan ${stocks.length} emiten hasil screener`;
+                container.innerHTML = ''; // Bersihkan loader
+
+                // Render kartu untuk setiap saham
+                stocks.forEach(stock => {
+                    const cardCol = document.createElement('div');
+                    cardCol.className = 'col-md-6 col-lg-4 mb-4';
+
+                    // Warna badge pola candlestick
+                    let badgeClass = "bg-secondary";
+                    if (stock.signal === 'BUY') badgeClass = "bg-success";
+                    if (stock.signal === 'EXIT') badgeClass = "bg-danger";
+
+                    // Warna badge status umum
+                    let statusBadgeClass = "bg-light text-dark border";
+                    if (stock.overall_status === 'STRONG BUY') statusBadgeClass = "bg-success text-white";
+                    else if (stock.overall_status.includes('BUY')) statusBadgeClass = "bg-primary text-white";
+                    else if (stock.overall_status.includes('EXIT')) statusBadgeClass = "bg-danger text-white";
+
+                    cardCol.innerHTML = `
+                        <div class="stock-card p-3 shadow-sm h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <!-- Header Emiten & Harga -->
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h4 class="fw-bold m-0 text-dark">${stock.ticker}</h4>
+                                    <span class="fs-5 fw-bold text-primary">Rp ${stock.price ? stock.price.toLocaleString('id-ID') : 0}</span>
+                                </div>
+
+                                <!-- Badge Pola Candlestick -->
+                                <div class="mb-3">
+                                    <span class="badge ${badgeClass} badge-pattern text-uppercase">
+                                        Pola: ${stock.candle_pattern || 'NEUTRAL'}
+                                    </span>
+                                </div>
+
+                                <!-- Kotak Trade Plan (RRR, SL & TP) jika Sinyal BUY -->
+                                ${stock.signal === 'BUY' ? `
+                                    <div class="trade-plan-box p-3 mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <small class="fw-semibold text-secondary text-sm">Risk-to-Reward (RRR):</small>
+                                            <span class="fw-bold ${stock.valid_rrr ? 'text-success' : 'text-danger'} text-sm">
+                                                1:${stock.rrr} ${stock.valid_rrr ? '✓ (Valid)' : '✗ (< 1:2)'}
+                                            </span>
+                                        </div>
+                                        <hr class="my-1 border-secondary opacity-25">
+                                        <div class="d-flex justify-content-between text-sm mt-2">
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger opacity-75 px-2 py-1">
+                                                SL: Rp ${stock.stop_loss ? stock.stop_loss.toLocaleString('id-ID') : 0}
+                                            </span>
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success opacity-75 px-2 py-1">
+                                                TP: Rp ${stock.take_profit ? stock.take_profit.toLocaleString('id-ID') : 0}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Footer Kartu: Nilai RSI & Status Rekomendasi -->
+                            <div class="pt-2 border-top d-flex justify-content-between align-items-center mt-2">
+                                <small class="text-muted fw-semibold text-sm">RSI: ${stock.rsi}</small>
+                                <span class="badge ${statusBadgeClass} px-2 py-1">
+                                    ${stock.overall_status}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+
+                    container.appendChild(cardCol);
+                });
+
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger shadow-sm">
+                            <h5 class="alert-heading">Gagal Memuat Data</h5>
+                            <p class="mb-0">${error.message}</p>
+                            <hr>
+                            <small class="mb-0">Pastikan Anda telah menjalankan <code>python screener.py</code> dan membuka proyek melalui local server (misal Live Server / <code>python -m http.server</code>).</small>
+                        </div>
+                    </div>`;
+                statusInfo.innerText = "Terjadi kesalahan saat memuat data.";
+            }
+        }
+
+        // Otomatis jalankan saat halaman web selesai dimuat
+        document.addEventListener('DOMContentLoaded', loadScreenerData);
+    </script>
+</body>
+</html>
