@@ -2,16 +2,17 @@ name: Automatic IDX Screener Update
 
 on:
   schedule:
-    # 08:45 - 12:30 WIB (01:45 - 05:30 UTC)
+    # Jadwal Bursa Efek Indonesia (IHSG) - Waktu UTC (WIB - 7 Jam)
+    # Sesi 1: 08:45 - 12:30 WIB (01:45 - 05:30 UTC)
     - cron: '45 1 * * 1-5'
     - cron: '0,15,30,45 2-4 * * 1-5'
     - cron: '0,15,30 5 * * 1-5'
     
-    # 13:00 - 16:30 WIB (06:00 - 09:30 UTC)
+    # Sesi 2: 13:00 - 16:30 WIB (06:00 - 09:30 UTC)
     - cron: '0,15,30,45 6-8 * * 1-5'
     - cron: '0,15,30 9 * * 1-5'
     
-  workflow_dispatch:
+  workflow_dispatch: # Supaya bisa di-trigger manual kapan saja dari tab GitHub Actions
 
 jobs:
   build-and-run:
@@ -30,14 +31,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install yfinance pandas requests
 
-      # Langsung jalankan screener.py tanpa update.js
-      - name: Run Screener Script
+      # Cek daftar file untuk memastikan screener.py terdeteksi
+      - name: Verify Directory Structure
+        run: |
+          echo "=== Memeriksa Keberadaan File ==="
+          ls -la
+
+      # Jalankan screener Python utama
+      - name: Run Screener Engine
         run: python screener.py
 
+      # Simpan dan Unggah Perubahan data.json Secara Otomatis
       - name: Commit and Push Updated Data
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.email "github-actions[bot]"
           git add data.json
           git status
           git commit -m "Auto-update data.json [skip ci]" || exit 0
