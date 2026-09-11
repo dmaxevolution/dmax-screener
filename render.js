@@ -17,6 +17,69 @@ function renderIHSG(ihsg) {
     if (pctEl) pctEl.innerText = `${ihsg.change_pct}%`;
 }
 
+// RENDER KARTU EMITEN SIAP ENTRY (RANK 1, 2, 3...)
+function renderReadyEntryRanked(items) {
+    const container = document.getElementById('ready-entry-cards');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `<div class="col-span-full p-4 bg-gray-900 text-center text-gray-400 rounded-xl border border-gray-800">Tidak ada emiten siap entry yang memenuhi kriteria keamanan saat ini.</div>`;
+        return;
+    }
+
+    items.forEach((item, index) => {
+        const rank = index + 1;
+        const inPantauan = pantauanList.includes(item.ticker);
+
+        let badgeBg = 'bg-gray-800 border-gray-700 text-gray-300';
+        if (rank === 1) badgeBg = 'bg-yellow-500 text-black border-yellow-400 font-black';
+        else if (rank === 2) badgeBg = 'bg-slate-300 text-black border-slate-200 font-black';
+        else if (rank === 3) badgeBg = 'bg-amber-700 text-white border-amber-600 font-black';
+
+        const card = document.createElement('div');
+        card.id = 'card-ranked-' + item.ticker;
+        card.className = 'bg-gradient-to-br from-gray-900 via-gray-900 to-gray-850 border border-gray-800 hover:border-green-500/50 rounded-xl p-3.5 shadow-lg relative transition-all';
+        
+        card.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded text-xs border ${badgeBg}">RANK #${rank}</span>
+                    <span class="font-black text-white text-base tracking-wide">${item.ticker}</span>
+                    <span class="text-[10px] bg-blue-950 text-blue-300 border border-blue-800 px-1.5 py-0.5 rounded font-bold">${item.category}</span>
+                </div>
+                <button onclick="${inPantauan ? `removeFromPantauan('${item.ticker}')` : `addToPantauan('${item.ticker}')`}" class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 p-1 rounded">
+                    ${inPantauan ? '❌' : '👁️+'}
+                </button>
+            </div>
+
+            <div class="flex justify-between items-baseline my-1.5">
+                <div>
+                    <span class="text-xs text-gray-400">Harga:</span>
+                    <span class="text-sm font-bold text-white ml-1">Rp ${item.close.toLocaleString('id-ID')}</span>
+                </div>
+                <span class="text-sm font-bold ${item.change_pct >= 0 ? 'text-green-400' : 'text-red-400'}">
+                    ${item.change_pct >= 0 ? '+' : ''}${item.change_pct}%
+                </span>
+            </div>
+
+            <div class="my-2 bg-gray-950 p-2 rounded-lg border border-gray-800/80 space-y-1.5">
+                <div class="flex justify-between items-center text-[11px]">
+                    <span class="text-gray-400">Skor Keamanan: <strong class="text-green-400">${item.safety_score}/100</strong></span>
+                    <span class="text-gray-400">RRR: <strong class="text-yellow-400">1:${item.rrr_ratio}</strong></span>
+                </div>
+                ${renderPowerBoxes(item.signal, item.power_score, item.candle_pattern)}
+            </div>
+
+            <div class="flex justify-between items-center pt-2 text-[11px] font-semibold border-t border-gray-800/80">
+                <span class="text-red-400">SL: ${item.stop_loss}</span>
+                <span class="text-green-400">TP: ${item.take_profit_1} / ${item.take_profit_2}</span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
 function renderTop10Entry(items) {
     const container = document.getElementById('top-10-data');
     if (!container) return;
@@ -24,12 +87,13 @@ function renderTop10Entry(items) {
 
     (items || []).forEach((item, index) => {
         const row = document.createElement('tr');
+        row.id = 'row-top10-' + item.ticker;
         row.innerHTML = `
-            <td class="py-2.5 px-3 font-bold text-green-400">#${index + 1}</td>
-            <td class="py-2.5 px-3 font-bold text-yellow-400">${item.ticker}</td>
+            <td class="py-2.5 px-3 font-bold text-yellow-400">#${index + 1}</td>
+            <td class="py-2.5 px-3 font-bold text-white">${item.ticker}</td>
             <td class="py-2.5 px-3">Rp ${item.close.toLocaleString('id-ID')}</td>
             <td class="py-2.5 px-3 ${item.change_pct >= 0 ? 'text-green-400' : 'text-red-400'}">${item.change_pct >= 0 ? '+' : ''}${item.change_pct}%</td>
-            <td class="py-2.5 px-3 text-center">${renderPowerBoxes(item.signal, item.power_score, item.candle_pattern)}</td>
+            <td class="py-2.5 px-3">${renderPowerBoxes(item.signal, item.power_score, item.candle_pattern)}</td>
             <td class="py-2.5 px-3 text-red-400 font-semibold">${item.stop_loss}</td>
             <td class="py-2.5 px-3 text-green-400 font-semibold">${item.take_profit_1} / ${item.take_profit_2}</td>
         `;
@@ -64,8 +128,11 @@ function renderTop10EntryMobile(items) {
                 </div>
             </div>
 
-            <div class="flex justify-between items-center my-2 bg-gray-950/50 p-2 rounded-lg border border-gray-800">
-                <span class="text-xs text-gray-300">Harga: <strong class="text-white text-sm">Rp ${item.close.toLocaleString('id-ID')}</strong></span>
+            <div class="my-2 bg-gray-950/50 p-2 rounded-lg border border-gray-800 space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-300">Harga: <strong class="text-white text-sm">Rp ${item.close.toLocaleString('id-ID')}</strong></span>
+                    <span class="text-[10px] text-gray-400">RRR: <strong class="text-yellow-400">1:${item.rrr_ratio}</strong></span>
+                </div>
                 ${renderPowerBoxes(item.signal, item.power_score, item.candle_pattern)}
             </div>
 
@@ -100,7 +167,7 @@ function renderDesktopTable(items) {
             <td class="p-3">${item.ema20} ${renderDot(item.ema20_status)}</td>
             <td class="p-3">${item.ema50} ${renderDot(item.ema50_status)}</td>
             <td class="p-3">${item.rsi} ${renderDot(item.rsi_status)}</td>
-            <td class="p-3 text-center">${renderPowerBoxes(item.signal, item.power_score, item.candle_pattern)}</td>
+            <td class="p-3">${renderPowerBoxes(item.signal, item.power_score, item.candle_pattern)}</td>
             <td class="p-3 text-red-400 font-semibold">${item.stop_loss}</td>
             <td class="p-3 text-green-400 font-semibold">${item.take_profit_1} / ${item.take_profit_2}</td>
             <td class="p-3 text-center">
@@ -140,8 +207,11 @@ function renderMobileCards(items) {
                     </button>
                 </div>
             </div>
-            <div class="flex justify-between items-center my-2 bg-gray-900/60 p-2 rounded-lg">
-                <span class="text-xs text-gray-300">Harga: <strong class="text-white">Rp ${item.close.toLocaleString('id-ID')}</strong></span>
+            <div class="my-2 bg-gray-900/60 p-2 rounded-lg space-y-1">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-300">Harga: <strong class="text-white">Rp ${item.close.toLocaleString('id-ID')}</strong></span>
+                    <span class="text-[10px] text-gray-400">RRR: <strong class="text-yellow-400">1:${item.rrr_ratio}</strong></span>
+                </div>
                 ${renderPowerBoxes(item.signal, item.power_score, item.candle_pattern)}
             </div>
             <div class="flex justify-between items-center pt-2 border-t border-gray-700/60 text-xs font-medium">
@@ -153,25 +223,57 @@ function renderMobileCards(items) {
     });
 }
 
-function searchTicker(tickerQuery) {
-    if (!tickerQuery) return;
-    const cleanTicker = tickerQuery.toUpperCase().trim();
-    
-    // Desktop Search & Scroll
-    const desktopRow = document.getElementById('row-' + cleanTicker);
-    if (desktopRow) {
-        desktopRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        desktopRow.classList.add('bg-yellow-900/50', 'animate-pulse');
-        setTimeout(() => desktopRow.classList.remove('bg-yellow-900/50', 'animate-pulse'), 3000);
+// EKSEKUSI PENCARIAN
+function handleSearchInput(event) {
+    if (event.key === 'Enter') {
+        executeSearch();
     }
+}
 
-    // Mobile Search & Scroll
-    const mobileCard = document.getElementById('card-' + cleanTicker) || document.getElementById('card-top10-' + cleanTicker);
-    if (mobileCard) {
-        mobileCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        mobileCard.classList.add('ring-4', 'ring-yellow-400', 'animate-pulse');
-        setTimeout(() => mobileCard.classList.remove('ring-4', 'ring-yellow-400', 'animate-pulse'), 3000);
-    }
+function executeSearch() {
+    const inputEl = document.getElementById('search-input');
+    if (!inputEl) return;
+    
+    const query = inputEl.value.toUpperCase().trim();
+    if (!query) return;
+
+    // 1. Pindah Tab Ke 'Semua' Agar Elemen Pasti Ada Di DOM
+    switchTab('all_stocks');
+
+    setTimeout(() => {
+        let found = false;
+
+        // Cek Kartu Ranked
+        const rankedCard = document.getElementById('card-ranked-' + query);
+        if (rankedCard) {
+            rankedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            rankedCard.classList.add('ring-4', 'ring-green-400', 'animate-pulse');
+            setTimeout(() => rankedCard.classList.remove('ring-4', 'ring-green-400', 'animate-pulse'), 3000);
+            found = true;
+        }
+
+        // Cek Tabel Desktop
+        const desktopRow = document.getElementById('row-' + query);
+        if (desktopRow) {
+            desktopRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            desktopRow.classList.add('bg-yellow-900/70', 'animate-pulse');
+            setTimeout(() => desktopRow.classList.remove('bg-yellow-900/70', 'animate-pulse'), 3000);
+            found = true;
+        }
+
+        // Cek Kartu Mobile
+        const mobileCard = document.getElementById('card-' + query);
+        if (mobileCard) {
+            mobileCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            mobileCard.classList.add('ring-4', 'ring-yellow-400', 'animate-pulse');
+            setTimeout(() => mobileCard.classList.remove('ring-4', 'ring-yellow-400', 'animate-pulse'), 3000);
+            found = true;
+        }
+
+        if (!found) {
+            alert(`Emiten dengan kode "${query}" tidak ditemukan atau belum terdaftar dalam sistem.`);
+        }
+    }, 100);
 }
 
 function renderCurrentTab() {
