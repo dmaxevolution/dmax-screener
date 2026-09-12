@@ -5,7 +5,7 @@
     --bg-header: #121721;
     --bg-card: #161c28;
     --bg-card-hover: #1e2638;
-    --bg-setup-card: #0f1c30; /* Warna biru lembut untuk Sinyal Setup */
+    --bg-entry-card: rgba(37, 99, 235, 0.08); /* Biru lembut untuk Entry Swing */
     
     --accent-blue: #2563eb;
     --border-color: #232d3f;
@@ -44,8 +44,8 @@ header.main-header {
     position: sticky;
     top: 0;
     z-index: 100;
-    width: 100%;
     gap: 10px;
+    width: 100%;
 }
 
 .brand-container { display: flex; flex-direction: column; }
@@ -70,7 +70,7 @@ header.main-header {
     align-items: center;
     gap: 6px;
     background: #090d14;
-    padding: 5px 10px;
+    padding: 4px 10px;
     border-radius: 8px;
     font-size: 11px;
     border: 1px solid var(--border-color);
@@ -81,7 +81,7 @@ header.main-header {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
     font-weight: 700;
-    padding: 2px 5px;
+    padding: 2px 4px;
     border-radius: 4px;
 }
 .ihsg-compact-badge .pct.up { color: var(--green-bullish); background: var(--green-bg); }
@@ -97,14 +97,14 @@ header.main-header {
     background: #090d14;
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 7px 28px 7px 12px;
+    padding: 6px 28px 6px 12px;
     border-radius: 6px;
     font-size: 12px;
     outline: none;
-    width: 150px;
+    width: 140px;
     transition: width 0.3s, border 0.2s;
 }
-.search-box input:focus { border-color: var(--accent-blue); width: 180px; }
+.search-box input:focus { width: 180px; border-color: var(--accent-blue); }
 .clear-search-btn {
     position: absolute;
     right: 8px;
@@ -113,9 +113,9 @@ header.main-header {
     color: var(--text-muted);
     font-size: 14px;
     cursor: pointer;
-    font-weight: bold;
+    display: none;
 }
-.clear-search-btn:hover { color: #fff; }
+.clear-search-btn.active { display: block; }
 
 /* Dashboard Layout */
 .dashboard-container { padding: 16px; max-width: 100%; overflow-x: hidden; }
@@ -139,14 +139,14 @@ header.main-header {
     font-weight: 700;
     color: var(--accent-blue);
     background: rgba(37, 99, 235, 0.15);
-    padding: 2px 8px;
+    padding: 2px 6px;
     border-radius: 4px;
 }
 
-/* Grids & Responsiveness */
+/* Grids */
 .stocks-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
     gap: 10px;
 }
 .entry-grid {
@@ -155,81 +155,104 @@ header.main-header {
     gap: 10px;
 }
 
-/* Card Styling & Bintang Hitam Pojok Kanan */
-.stock-card-compact, .entry-card {
+/* Card Styling & Card Biru Lembut untuk Entry Swing */
+.stock-card-compact {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 12px;
     cursor: pointer;
-    position: relative;
     transition: all 0.2s ease;
+    position: relative;
 }
+
 .entry-card {
-    background: var(--bg-setup-card); /* Warna Biru Lembut */
-    border-color: rgba(59, 130, 246, 0.3);
+    background: var(--bg-entry-card);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
 }
+
 .stock-card-compact:hover, .entry-card:hover {
     background: var(--bg-card-hover);
     border-color: var(--border-highlight);
     transform: translateY(-2px);
 }
 
-.black-star {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 14px;
-    color: #111;
-    text-shadow: 0 0 2px #fff;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-.black-star.favorited {
-    color: var(--yellow-accent);
-    text-shadow: 0 0 4px rgba(245, 158, 11, 0.5);
-}
-
 .stock-card-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 6px;
-    padding-right: 18px; /* Ruang untuk bintang */
+    margin-bottom: 4px;
+    position: relative;
 }
-.ticker { font-weight: 800; font-size: 15px; color: #fff; }
+.ticker { font-weight: 800; font-size: 14px; color: #fff; }
 .sector-name { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
 
-/* Perbesar Selisih Persentase dan Nilai Power Score */
+/* Bintang Hitam di Pojok Kanan Kartu */
+.black-star {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 14px;
+    color: #334155; /* Hitam/abu gelap elegan */
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.black-star.favorited { color: var(--yellow-accent); }
+
 .price-text {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-secondary);
 }
+
+/* Perbesar Angka Selisih Persentase dan Nilai Power Score */
 .pct { 
     font-family: 'JetBrains Mono', monospace; 
-    font-weight: 800; 
+    font-weight: 700; 
     font-size: 14px; /* Diperbesar */
 }
 .pct.up { color: var(--green-bullish); }
 .pct.down { color: var(--red-bearish); }
 
-/* Status Column Custom (Rocket, Pasir, Wait) */
-.status-badge-col {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 6px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 700;
-    font-family: 'Inter', sans-serif;
+.power-val { 
+    font-family: 'JetBrains Mono', monospace; 
+    font-size: 12px; /* Diperbesar */
+    color: var(--text-primary); 
+    font-weight: 700; 
 }
-.status-buy { background: rgba(16, 185, 129, 0.15); color: var(--green-bullish); border: 1px solid rgba(16, 185, 129, 0.3); }
-.status-entry { background: rgba(245, 158, 11, 0.15); color: var(--yellow-accent); border: 1px solid rgba(245, 158, 11, 0.3); }
-.status-wait { background: rgba(100, 116, 139, 0.15); color: var(--text-muted); border: 1px solid var(--border-color); }
+
+/* Status Icon Bar (Rocket, Pasir, Wait) */
+.action-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: fit-content;
+}
+.action-status-bar.buy { color: var(--green-bullish); background: var(--green-bg); }
+.action-status-bar.entry { color: var(--yellow-accent); background: rgba(245, 158, 11, 0.12); }
+.action-status-bar.wait { color: var(--red-bearish); background: var(--red-bg); }
+
+/* Animasi Blink untuk Hasil Pencarian / Favorit */
+@keyframes blinkEffect {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(1.02); background-color: var(--accent-blue); }
+    100% { opacity: 1; transform: scale(1); }
+}
+.blink-animation {
+    animation: blinkEffect 0.6s ease-in-out 3;
+}
 
 /* Rotating Signal Badge */
 .rotator-badge {
@@ -248,28 +271,12 @@ header.main-header {
 .rotator-badge.neutral { color: var(--text-muted); background: #090d14; border-color: var(--border-color); }
 .rotator-badge.gold { color: var(--yellow-accent); background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3); }
 
-/* Power Score Bar & Angka Diperbesar */
-.power-container { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+/* Power Score Bar Component (Dipindah ke atas nama EMITEN) */
+.power-container { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
 .power-bars { display: flex; gap: 2px; }
-.bar-segment { width: 5px; height: 10px; background: #232d3f; border-radius: 1px; }
+.bar-segment { width: 4px; height: 8px; background: #232d3f; border-radius: 1px; }
 .bar-segment.active-green { background: var(--green-bullish); }
 .bar-segment.active-red { background: var(--red-bearish); }
-.power-val { 
-    font-family: 'JetBrains Mono', monospace; 
-    font-size: 12px; /* Diperbesar */
-    color: var(--text-primary); 
-    font-weight: 800; 
-}
-
-/* Efek Blink 3x untuk Hasil Pencarian Pindah ke Favorite */
-@keyframes blinkCard {
-    0% { opacity: 1; transform: scale(1); border-color: var(--border-highlight); }
-    50% { opacity: 0.3; transform: scale(0.98); border-color: var(--yellow-accent); background: rgba(245, 158, 11, 0.2); }
-    100% { opacity: 1; transform: scale(1); border-color: var(--border-highlight); }
-}
-.blink-effect {
-    animation: blinkCard 0.6s ease-in-out 3;
-}
 
 /* Modal */
 .modal-overlay {
@@ -278,18 +285,17 @@ header.main-header {
     backdrop-filter: blur(4px);
     display: flex; align-items: center; justify-content: center;
     z-index: 1000;
-    padding: 16px;
 }
 .modal-content {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    padding: 18px;
+    padding: 16px;
     border-radius: 10px;
-    width: 100%; max-width: 400px;
+    width: 90%; max-width: 380px;
 }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.close-btn { background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; }
-.modal-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #1f293d; font-size: 12px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.close-btn { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+.modal-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1f293d; font-size: 11px; }
 .modal-row span:first-child { color: var(--text-muted); }
 .modal-row span:last-child { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
 .hidden { display: none !important; }
