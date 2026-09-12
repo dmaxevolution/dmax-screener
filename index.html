@@ -21,26 +21,28 @@
                 <span id="ihsg-pct" class="pct">-</span>
             </div>
             
-            <div class="search-wrapper">
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Cari emiten (Enter=Fav)..." onkeyup="filterStocks(event)">
+            <div class="search-box">
+                <div class="search-wrapper">
+                    <input type="text" id="search-input" placeholder="Cari emiten..." oninput="handleSearchInput()" onkeypress="handleSearchKey(event)">
+                    <button id="clear-search" class="clear-search-btn" onclick="clearSearch()">&times;</button>
                 </div>
-                <button class="clear-search-btn" onclick="clearSearch()" title="Hapus Pencarian">&times;</button>
             </div>
         </div>
     </header>
 
     <main class="dashboard-container">
-        <!-- Favorite Watchlist (Permanen di Local/IndexedDB, Bisa Dihapus lewat Bintang) -->
-        <section id="favorite-section" style="display: none;">
+        <!-- Bagian Favorit (Hasil Pencarian dengan Efek Blink Dipindah ke Sini) -->
+        <section>
             <div class="section-header">
-                <h3>⭐ Favorite Tersimpan</h3>
-                <span class="badge-live">PERMANENT</span>
+                <h3>⭐ Emiten Favorit & Pencarian</h3>
+                <button onclick="clearFavoritesDB()" style="font-size:10px; background:none; border:1px solid var(--border-color); color:var(--text-muted); padding:2px 6px; border-radius:4px; cursor:pointer;">Reset DB</button>
             </div>
-            <div id="favorite-grid" class="stocks-grid"></div>
+            <div id="favorites-list" class="stocks-grid">
+                <div style="font-size:11px; color:var(--text-muted); grid-column: 1/-1;">Belum ada emiten favorit. Cari emiten di kolom pencarian untuk memindahkannya ke sini.</div>
+            </div>
         </section>
 
-        <!-- Sinyal Setup Entry Swing (Ditempatkan di Bawah Favorite) -->
+        <!-- Barisan Sinyal Setup Entry Swing (Ditempatkan di bawah Favorit) -->
         <section>
             <div class="section-header">
                 <h3>Sinyal Setup Entry Swing</h3>
