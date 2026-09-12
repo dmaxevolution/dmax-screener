@@ -3,71 +3,67 @@
  */
 
 let stocksData = [];
-let favoritesData = [];
-let currentPhase = 0; 
+let favoriteTickers = new Set();
+let currentPhase = 0;
+let currentModalStock = null;
 
-// Inisialisasi IndexedDB untuk Backup Permanen
-let db;
+// IndexedDB Setup untuk Backup Permanen
 const DB_NAME = "IDX_Screener_DB";
 const STORE_NAME = "favorites";
+let db = null;
 
 function initIndexedDB() {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onerror = (event) => console.error("IndexedDB error:", event);
-    request.onsuccess = (event) => {
-        db = event.target.result;
-        loadFavoritesFromDB();
-    };
-    request.onupgradeneeded = (event) => {
-        const dbInstance = event.target.result;
-        if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
-            dbInstance.createObjectStore(STORE_NAME, { keyPath: "ticker" });
-        }
-    };
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            db = request.result;
+            loadFavoritesFromDB().then(resolve);
+        };
+        request.onupgradeneeded = (event) => {
+            const database = event.target.result;
+            if (!database.objectStoreNames.contains(STORE_NAME)) {
+                database.createObjectStore(STORE_NAME, { keyPath: "ticker" });
+            }
+        };
+    });
 }
 
 function saveFavoriteToDB(stock) {
     if (!db) return;
-    const transaction = db.transaction([STORE_NAME], "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
     store.put(stock);
-    transaction.oncomplete = () => loadFavoritesFromDB();
+    favoriteTickers.add(stock.ticker);
+    refreshUIFavorites();
 }
 
 function removeFavoriteFromDB(ticker) {
     if (!db) return;
-    const transaction = db.transaction([STORE_NAME], "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
     store.delete(ticker);
-    transaction.oncomplete = () => loadFavoritesFromDB();
+    favoriteTickers.delete(ticker);
+    refreshUIFavorites();
 }
 
 function loadFavoritesFromDB() {
-    if (!db) return;
-    const transaction = db.transaction([STORE_NAME], "readonly");
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.getAll();
-    request.onsuccess = (event) => {
-        favoritesData = event.target.result || [];
-        renderFavoritesSection();
-        updateAllCardsStarState();
-    };
+    return new Promise((resolve) => {
+        if (!db) return resolve([]);
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => {
+            const items = request.result || [];
+            items.forEach(item => favoriteTickers.add(item.ticker));
+            refreshUIFavorites();
+            resolve(items);
+        };
+    });
 }
 
-function clearFavoritesDB() {
-    if (!db) return;
-    const transaction = db.transaction([STORE_NAME], "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
-    store.clear();
-    transaction.oncomplete = () => {
-        favoritesData = [];
-        renderFavoritesSection();
-        updateAllCardsStarState();
-    };
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    initIndexedDB();
+document.addEventListener("DOMContentLoaded", async () => {
+    await initIndexedDB();
     fetchData();
     startUIRotator();
 });
@@ -121,125 +117,84 @@ function renderTop10Compact(top10List) {
     const grid = document.getElementById('top10-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    top10List.forEach(stock => grid.appendChild(createStockCard(stock, false)));
+    top10List.forEach(stock => grid.appendChild(createStockCard(stock)));
 }
 
 function renderAllStocksGrid(stocks) {
     const grid = document.getElementById('all-stocks-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    stocks.forEach(stock => grid.appendChild(createStockCard(stock, false)));
+    stocks.forEach(stock => grid.appendChild(createStockCard(stock)));
 }
 
-function renderFavoritesSection() {
-    const container = document.getElementById('favorites-list');
-    if (!container) return;
-    container.innerHTML = '';
-
-    if (favoritesData.length === 0) {
-        container.innerHTML = `<div style="font-size:11px; color:var(--text-muted); grid-column: 1/-1;">Belum ada emiten favorit. Cari emiten di kolom pencarian untuk memindahkannya ke sini.</div>`;
-        return;
-    }
-
-    favoritesData.forEach(stock => {
-        container.appendChild(createStockCard(stock, false, true));
-    });
-}
-
-function createStockCard(stock, isEntryCard = false, isFavorite = false) {
+function createStockCard(stock) {
     const card = document.createElement('div');
-    card.className = isEntryCard ? 'entry-card' : 'stock-card-compact';
+    card.className = 'stock-card-compact';
     card.id = `card-${stock.ticker}`;
     
     const isUp = stock.change_pct >= 0;
     const powerBarHTML = renderSignalPowerBar(stock.power_score || 5);
     const analysis = evaluateEntryStrategy(stock);
     const badgeHTML = getRotatorBadgeHTML(stock.ticker, analysis);
-    const actionBarHTML = renderActionBar(stock);
-    const isFav = favoritesData.some(f => f.ticker === stock.ticker);
+    const actionHTML = renderActionColumn(stock, analysis);
+    const isFav = favoriteTickers.has(stock.ticker);
     
     card.innerHTML = `
-        <span class="black-star ${isFav ? 'favorited' : ''}" onclick="toggleFavorite(event, '${stock.ticker}')">★</span>
+        <button class="black-star-btn ${isFav ? 'favorited' : ''}" onclick="event.stopPropagation(); toggleFavorite('${stock.ticker}')">★</button>
         ${powerBarHTML}
         <div class="stock-card-header">
             <div>
                 <div class="ticker">${stock.ticker}</div>
                 <div class="sector-name">${stock.sector}</div>
             </div>
+        </div>
+        <div class="price-container">
+            <div class="price-text">Rp ${stock.close.toLocaleString('id-ID')}</div>
             <span class="pct ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${stock.change_pct}%</span>
         </div>
-        <div class="price-text">Rp ${stock.close.toLocaleString('id-ID')}</div>
-        <div style="margin-top:6px;" id="badge-rotator-${stock.ticker}">${badgeHTML}</div>
-        ${actionBarHTML}
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+            <div id="badge-rotator-${stock.ticker}">${badgeHTML}</div>
+            <div>${actionHTML}</div>
+        </div>
     `;
     card.onclick = () => openModal(stock);
     return card;
 }
 
-function toggleFavorite(event, ticker) {
-    event.stopPropagation();
+function toggleFavorite(ticker) {
     const stock = stocksData.find(s => s.ticker === ticker);
     if (!stock) return;
-
-    const isFav = favoritesData.some(f => f.ticker === ticker);
-    if (isFav) {
+    if (favoriteTickers.has(ticker)) {
         removeFavoriteFromDB(ticker);
     } else {
         saveFavoriteToDB(stock);
     }
-}
-
-function updateAllCardsStarState() {
-    document.querySelectorAll('.black-star').forEach(star => {
-        // Logika memperbarui status bintang
+    // Update ikon bintang pada semua kartu yang bersangkutan
+    document.querySelectorAll(`.black-star-btn`).forEach(btn => {
+        if (btn.closest(`#card-${ticker}`)) {
+            btn.classList.toggle('favorited', favoriteTickers.has(ticker));
+        }
     });
 }
 
-// Live Search & Blink Pindah ke Favorit dengan Tombol X
-function handleSearchInput() {
-    const input = document.getElementById('search-input');
-    const clearBtn = document.getElementById('clear-search');
-    if (input.value.length > 0) {
-        clearBtn.classList.add('active');
-    } else {
-        clearBtn.classList.remove('active');
+function refreshUIFavorites() {
+    const favSection = document.getElementById('favorite-section');
+    const favList = document.getElementById('favorite-list');
+    if (!favSection || !favList) return;
+
+    if (favoriteTickers.size === 0) {
+        favSection.classList.add('hidden');
+        return;
     }
+
+    favSection.classList.remove('hidden');
+    favList.innerHTML = '';
+    
+    stocksData.filter(s => favoriteTickers.has(s.ticker)).forEach(stock => {
+        favList.appendChild(createStockCard(stock));
+    });
 }
 
-function handleSearchKey(event) {
-    if (event.key === 'Enter') {
-        const query = document.getElementById('search-input').value.toUpperCase().trim();
-        const found = stocksData.find(s => s.ticker === query || s.sector.toUpperCase().includes(query));
-        
-        if (found) {
-            // Masukkan ke favorit dan beri efek blink 3x
-            if (!favoritesData.some(f => f.ticker === found.ticker)) {
-                saveFavoriteToDB(found);
-            }
-            setTimeout(() => {
-                const favCard = document.getElementById(`card-${found.ticker}`);
-                if (favCard) {
-                    favCard.classList.add('blink-animation');
-                    setTimeout(() => favCard.classList.remove('blink-animation'), 1800);
-                }
-            }, 150);
-        }
-    }
-}
-
-function clearSearch() {
-    document.getElementById('search-input').value = '';
-    document.getElementById('clear-search').classList.remove('active');
-    renderAllStocksGrid(stocksData);
-}
-
-function filterStocks() {
-    const query = document.getElementById('search-input').value.toUpperCase();
-    const filtered = stocksData.filter(s => s.ticker.includes(query) || s.sector.toUpperCase().includes(query));
-    renderAllStocksGrid(filtered);
-}
-
-// Rotator Engine
 function getRotatorBadgeHTML(ticker, analysis) {
     let label = analysis.patternName;
     let iconKey = analysis.iconKey;
@@ -268,8 +223,44 @@ function startUIRotator() {
     }, 3000);
 }
 
+// Live Search dengan Blink 3x & Tombol X Clear
+function handleSearchInput() {
+    const input = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search');
+    const query = input.value.trim().toUpperCase();
+
+    if (query.length > 0) {
+        clearBtn.classList.add('active');
+    } else {
+        clearBtn.classList.remove('active');
+    }
+
+    const filtered = stocksData.filter(s => s.ticker.includes(query) || s.sector.toUpperCase().includes(query));
+    renderAllStocksGrid(filtered);
+
+    // Efek Blink 3x pada hasil pencarian pertama jika pas
+    if (query.length > 1 && filtered.length > 0) {
+        const firstMatchCard = document.getElementById(`card-${filtered[0].ticker}`);
+        if (firstMatchCard) {
+            firstMatchCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstMatchCard.classList.remove('blink-card');
+            void firstMatchCard.offsetWidth; // Trigger reflow
+            firstMatchCard.classList.add('blink-card');
+        }
+    }
+}
+
+function clearSearch() {
+    const input = document.getElementById('search-input');
+    input.value = '';
+    document.getElementById('clear-search').classList.remove('active');
+    renderAllStocksGrid(stocksData);
+    input.focus();
+}
+
 // Modal Details
 function openModal(stock) {
+    currentModalStock = stock;
     document.getElementById('modal-ticker').textContent = stock.ticker;
     document.getElementById('modal-sector').textContent = stock.sector;
     const details = document.getElementById('modal-details');
@@ -282,14 +273,26 @@ function openModal(stock) {
         <div class="modal-row"><span>Stop Loss (SL)</span><span style="color:var(--red-bearish);">Rp ${stock.stop_loss.toLocaleString('id-ID')}</span></div>
         <div class="modal-row"><span>Target Profit 1 (TP1)</span><span style="color:var(--green-bullish);">Rp ${stock.take_profit_1.toLocaleString('id-ID')}</span></div>
         <div class="modal-row"><span>Target Profit 2 (TP2)</span><span style="color:var(--green-bullish);">Rp ${stock.take_profit_2.toLocaleString('id-ID')}</span></div>
-        <div style="margin-top:12px;">
-            <span style="font-size:11px; color:var(--text-muted); font-weight:700;">POWER SCORE</span>
-            ${renderSignalPowerBar(stock.power_score || 5)}
-        </div>
     `;
+
+    const favBtn = document.getElementById('modal-fav-btn');
+    if (favoriteTickers.has(stock.ticker)) {
+        favBtn.textContent = "Hapus dari Favorite DB";
+        favBtn.style.background = "var(--red-bearish)";
+    } else {
+        favBtn.textContent = "Simpan ke Favorite DB";
+        favBtn.style.background = "var(--accent-blue)";
+    }
+
     document.getElementById('stock-modal').classList.remove('hidden');
 }
 
 function closeModal() {
     document.getElementById('stock-modal').classList.add('hidden');
+}
+
+function toggleCurrentModalFavorite() {
+    if (!currentModalStock) return;
+    toggleFavorite(currentModalStock.ticker);
+    openModal(currentModalStock); // Refresh modal button state
 }
