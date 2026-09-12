@@ -1,6 +1,6 @@
 {
-  "last_updated": "2026-09-12 08:55:49 WIB",
-  "total_emiten": 95,
+  "last_updated": "2026-09-12 18:24:31 WIB",
+  "total_emiten": 99,
   "ihsg": {
     "name": "IHSG",
     "close": 6541.38,
@@ -98,6 +98,24 @@
       "take_profit_2": 932
     },
     {
+      "ticker": "KOTA",
+      "sector": "Real Estate",
+      "open": 199,
+      "high": 208,
+      "low": 193,
+      "close": 202,
+      "prev_open": 208,
+      "prev_close": 202,
+      "change_pct": 0.0,
+      "ema20": 191.64,
+      "ema50": 163.32,
+      "rsi": 60.2,
+      "power_score": 8.5,
+      "stop_loss": 137,
+      "take_profit_1": 300,
+      "take_profit_2": 364
+    },
+    {
       "ticker": "BMRI",
       "sector": "Financials",
       "open": 4330,
@@ -168,24 +186,6 @@
       "stop_loss": 853,
       "take_profit_1": 1020,
       "take_profit_2": 1088
-    },
-    {
-      "ticker": "DOID",
-      "sector": "Energy",
-      "open": 246,
-      "high": 258,
-      "low": 242,
-      "close": 252,
-      "prev_open": 258,
-      "prev_close": 248,
-      "change_pct": 1.61,
-      "ema20": 238.32,
-      "ema50": 226.8,
-      "rsi": 60.8,
-      "power_score": 8.5,
-      "stop_loss": 208,
-      "take_profit_1": 318,
-      "take_profit_2": 362
     }
   ],
   "all_stocks": [
@@ -278,6 +278,24 @@
       "stop_loss": 495,
       "take_profit_1": 808,
       "take_profit_2": 932
+    },
+    {
+      "ticker": "KOTA",
+      "sector": "Real Estate",
+      "open": 199,
+      "high": 208,
+      "low": 193,
+      "close": 202,
+      "prev_open": 208,
+      "prev_close": 202,
+      "change_pct": 0.0,
+      "ema20": 191.64,
+      "ema50": 163.32,
+      "rsi": 60.2,
+      "power_score": 8.5,
+      "stop_loss": 137,
+      "take_profit_1": 300,
+      "take_profit_2": 364
     },
     {
       "ticker": "BMRI",
@@ -1090,6 +1108,24 @@
       "take_profit_2": 1145
     },
     {
+      "ticker": "JGLE",
+      "sector": "Consumer Cyclicals",
+      "open": 78,
+      "high": 80,
+      "low": 76,
+      "close": 77,
+      "prev_open": 82,
+      "prev_close": 78,
+      "change_pct": -1.28,
+      "ema20": 82.71,
+      "ema50": 77.09,
+      "rsi": 38.0,
+      "power_score": 5.0,
+      "stop_loss": 74,
+      "take_profit_1": 82,
+      "take_profit_2": 95
+    },
+    {
       "ticker": "BBCA",
       "sector": "Financials",
       "open": 6400,
@@ -1594,6 +1630,24 @@
       "take_profit_2": 1908
     },
     {
+      "ticker": "BNBR",
+      "sector": "Industrials",
+      "open": 94,
+      "high": 95,
+      "low": 90,
+      "close": 95,
+      "prev_open": 98,
+      "prev_close": 95,
+      "change_pct": 0.0,
+      "ema20": 98.91,
+      "ema50": 102.42,
+      "rsi": 37.5,
+      "power_score": 3.0,
+      "stop_loss": 88,
+      "take_profit_1": 106,
+      "take_profit_2": 112
+    },
+    {
       "ticker": "ARTO",
       "sector": "Financials",
       "open": 1000,
@@ -1718,6 +1772,24 @@
       "stop_loss": 337,
       "take_profit_1": 364,
       "take_profit_2": 376
+    },
+    {
+      "ticker": "BACH",
+      "sector": "Energy",
+      "open": 444,
+      "high": 444,
+      "low": 426,
+      "close": 434,
+      "prev_open": 450,
+      "prev_close": 446,
+      "change_pct": -2.69,
+      "ema20": 480.67,
+      "ema50": 522.87,
+      "rsi": 25.0,
+      "power_score": 2.5,
+      "stop_loss": 417,
+      "take_profit_1": 460,
+      "take_profit_2": 500
     },
     {
       "ticker": "BRIS",
