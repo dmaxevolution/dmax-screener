@@ -2,23 +2,21 @@
  * indicators.js - Analysis Engine & Dynamic SVG Generator
  */
 
-// 1. Dynamic SVG Icon Generator
 function getCandleIconSVG(patternType) {
     switch (patternType) {
         case 'HAMMER':
-            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="2" x2="12" y2="22"/><rect x="8" y="2" width="8" height="6" fill="currentColor" rx="1"/></svg>`;
+            return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="2" x2="12" y2="22"/><rect x="8" y="2" width="8" height="6" fill="currentColor" rx="1"/></svg>`;
         case 'ENGULFING_BULL':
-            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="8" x2="6" y2="18" stroke="#ef4444"/><rect x="4" y="10" width="4" height="6" fill="#ef4444"/><line x1="16" y1="2" x2="16" y2="22"/><rect x="13" y="4" width="6" height="15" fill="currentColor" rx="1"/></svg>`;
+            return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="8" x2="6" y2="18" stroke="#ef4444"/><rect x="4" y="10" width="4" height="6" fill="#ef4444"/><line x1="16" y1="2" x2="16" y2="22"/><rect x="13" y="4" width="6" height="15" fill="currentColor" rx="1"/></svg>`;
         case 'ENGULFING_BEAR':
-            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="8" x2="6" y2="18" stroke="#10b981"/><rect x="4" y="10" width="4" height="6" fill="#10b981"/><line x1="16" y1="2" x2="16" y2="22"/><rect x="13" y="4" width="6" height="15" fill="currentColor" rx="1"/></svg>`;
+            return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="8" x2="6" y2="18" stroke="#10b981"/><rect x="4" y="10" width="4" height="6" fill="#10b981"/><line x1="16" y1="2" x2="16" y2="22"/><rect x="13" y="4" width="6" height="15" fill="currentColor" rx="1"/></svg>`;
         case 'G_CROSS':
-            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 18L21 6" stroke="#10b981"/><path d="M3 6L21 18" stroke="#3b82f6"/><circle cx="12" cy="12" r="2" fill="#f59e0b"/></svg>`;
+            return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 18L21 6" stroke="#10b981"/><path d="M3 6L21 18" stroke="#3b82f6"/><circle cx="12" cy="12" r="2" fill="#f59e0b"/></svg>`;
         default:
             return '';
     }
 }
 
-// 2. Candlestick Pattern Detection
 function detectCandlePattern(open, high, low, close, prevOpen, prevClose) {
     const body = Math.abs(close - open);
     const range = high - low;
@@ -42,7 +40,6 @@ function detectCandlePattern(open, high, low, close, prevOpen, prevClose) {
     return { name: "-", type: "NEUTRAL", iconKey: "" };
 }
 
-// 3. Strategy Evaluation Engine
 function evaluateEntryStrategy(stock) {
     const candle = detectCandlePattern(
         stock.open, stock.high, stock.low, stock.close,
@@ -66,7 +63,7 @@ function evaluateEntryStrategy(stock) {
     };
 }
 
-// 4. Power Score Bar Visualizer (Power Bar dipindah ke atas nama emiten)
+// Power Score Bar di Atas Nama Emiten dengan Nilai Diperbesar
 function renderSignalPowerBar(powerScore) {
     const score = Math.min(10, Math.max(1, Math.round(powerScore)));
     const activeClass = score >= 6 ? "active-green" : "active-red";
@@ -78,21 +75,20 @@ function renderSignalPowerBar(powerScore) {
     barsHTML += '</div>';
 
     return `
-        <div class="power-container">
+        <div class="power-container-top">
             ${barsHTML}
             <span class="power-val">${powerScore}</span>
         </div>
     `;
 }
 
-// 5. Action Status Bar (Rocket, Pasir/Jam Pasir, Wait)
-function renderActionBar(stock) {
-    const score = stock.power_score || 5;
-    if (score >= 7.5 && stock.change_pct > 0) {
-        return `<div class="action-status-bar buy">🚀 BUY</div>`;
-    } else if (score >= 5.5 && score < 7.5) {
-        return `<div class="action-status-bar entry">⏳ ENTRY</div>`;
+// Render Kolom Action: Rocket (BUY), Pasir/Timed (ENTRY), Wait
+function renderActionColumn(stock, analysis) {
+    if (analysis.entryStatus === "BUY_ENTRY") {
+        return `<div class="action-badge buy">🚀 BUY</div>`;
+    } else if (stock.rsi <= 45 || analysis.patternType === "BULLISH") {
+        return `<div class="action-badge entry">⏳ ENTRY</div>`;
     } else {
-        return `<div class="action-status-bar wait">💤 WAIT</div>`;
+        return `<div class="action-badge wait">⏸️ WAIT</div>`;
     }
 }
