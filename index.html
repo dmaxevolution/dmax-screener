@@ -22,32 +22,29 @@
             </div>
             
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="Cari emiten / sektor..." onkeyup="filterStocks()">
+                <input type="text" id="search-input" placeholder="Cari emiten..." oninput="filterStocks()">
+                <button class="clear-search-btn" id="clear-search" onclick="clearSearchBox()">&times;</button>
             </div>
         </div>
     </header>
 
     <main class="dashboard-container">
-        <!-- Wadah Hasil Pencarian (Poin 1: Dipindah ke atas sinyal setup dengan efek blink) -->
-        <section id="search-results-section" class="hidden">
-            <div class="section-header">
-                <h3>Hasil Pencarian Emiten</h3>
-                <span class="badge-live" style="background: rgba(245, 158, 11, 0.15); color: var(--yellow-accent);">SEARCH RESULT</span>
-            </div>
-            <div id="search-results-grid" class="stocks-grid"></div>
-        </section>
-
-        <!-- Barisan Kartu Favorite (Poin 4: Ditempatkan dibawah TOP HIGH POWER) -->
+        <!-- Favorite Section (Pencarian/Blink dipindah ke sini) -->
         <section id="favorite-section">
             <div class="section-header">
-                <h3>⭐ Favorite Emiten Saya</h3>
-                <span class="badge-live" style="background: rgba(245, 158, 11, 0.15); color: var(--yellow-accent);">INDEXEDDB SAVED</span>
+                <h3>Emiten Favorit / Hasil Pencarian</h3>
+                <button onclick="clearAllFavorites()" style="background:none; border:none; color:var(--red-bearish); font-size:10px; cursor:pointer;">Hapus Backup DB</button>
             </div>
-            <div id="favorite-grid" class="stocks-grid">
-                <div style="font-size: 11px; color: var(--text-muted); grid-column: 1 / -1; padding: 6px 0;">
-                    Belum ada emiten favorit. Klik ikon bintang hitam (★) pada kartu emiten untuk menyimpan permanen.
-                </div>
+            <div id="favorite-list" class="stocks-grid"></div>
+        </section>
+
+        <!-- Entry Signal Radar (Diposisikan di bawah Favorite) -->
+        <section>
+            <div class="section-header">
+                <h3>Sinyal Setup Entry Swing</h3>
+                <span class="badge-live">LIVE RADAR</span>
             </div>
+            <div id="entry-list" class="entry-grid"></div>
         </section>
 
         <!-- Top 10 High Power Watchlist -->
@@ -56,15 +53,6 @@
                 <h3>Top 10 High Power Score</h3>
             </div>
             <div id="top10-grid" class="stocks-grid"></div>
-        </section>
-
-        <!-- Entry Signal Radar -->
-        <section>
-            <div class="section-header">
-                <h3>Sinyal Setup Entry Swing</h3>
-                <span class="badge-live">LIVE RADAR</span>
-            </div>
-            <div id="entry-list" class="entry-grid"></div>
         </section>
 
         <!-- All Stocks Grid -->
@@ -81,8 +69,8 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div>
-                    <h2 id="modal-ticker" style="font-size: 16px;"></h2>
-                    <span id="modal-sector" class="sector-badge" style="font-size: 10px; color: var(--text-muted);"></span>
+                    <h2 id="modal-ticker"></h2>
+                    <span id="modal-sector" class="sector-badge"></span>
                 </div>
                 <button onclick="closeModal()" class="close-btn">&times;</button>
             </div>
