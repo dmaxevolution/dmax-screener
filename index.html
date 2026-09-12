@@ -3,42 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IDX Luxury Screener</title>
+    <title>IDX Swing Trading Screener</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
     <header class="main-header">
-        <div class="brand-title">IDX ANALYTICS</div>
-        <div class="ihsg-compact-badge">
-            <span>IHSG</span>
-            <span id="ihsg-val" class="value">-</span>
-            <span id="ihsg-pct" class="pct">-</span>
+        <div class="brand-container">
+            <div class="brand-title">IDX TERMINAL</div>
+            <div class="subtitle">Swing Trading Screener</div>
         </div>
-        <div style="font-size:12px; color:var(--gold-accent); font-weight:700;" id="total-emiten-count">0 Emiten BEI</div>
+
+        <div class="header-right">
+            <div class="ihsg-compact-badge">
+                <span class="label">IHSG</span>
+                <span id="ihsg-val" class="value">-</span>
+                <span id="ihsg-pct" class="pct">-</span>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Cari emiten / sektor..." onkeyup="filterStocks()">
+            </div>
+        </div>
     </header>
 
-    <section>
-        <h3>Entry Setup Signal</h3>
-        <div id="entry-list"></div>
-    </section>
+    <main class="dashboard-container">
+        <!-- Entry Signal Radar -->
+        <section>
+            <div class="section-header">
+                <h3>Sinyal Setup Entry Swing</h3>
+                <span class="badge-live">LIVE RADAR</span>
+            </div>
+            <div id="entry-list" class="entry-grid"></div>
+        </section>
 
-    <section>
-        <h3>Top 10 Watchlist</h3>
-        <div id="top10-grid" class="top10-grid"></div>
-    </section>
+        <!-- Top 10 High Power Watchlist -->
+        <section>
+            <div class="section-header">
+                <h3>Top 10 High Power Score</h3>
+            </div>
+            <div id="top10-grid" class="stocks-grid"></div>
+        </section>
 
-    <section style="margin-bottom: 40px;">
-        <h3>Semua Emiten BEI (120+)</h3>
-        <div id="all-stocks-grid" class="top10-grid"></div>
-    </section>
+        <!-- All Stocks Grid -->
+        <section style="margin-bottom: 40px;">
+            <div class="section-header">
+                <h3>Semua Emiten Pilihan BEI (<span id="total-emiten-count">0</span>)</h3>
+            </div>
+            <div id="all-stocks-grid" class="stocks-grid"></div>
+        </section>
+    </main>
 
     <!-- Modal Detail Emiten -->
     <div id="stock-modal" class="modal-overlay hidden">
         <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h2 id="modal-ticker" style="margin:0; font-size:18px; color:var(--gold-accent);"></h2>
-                <button onclick="closeModal()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">&times;</button>
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-ticker"></h2>
+                    <span id="modal-sector" class="sector-badge"></span>
+                </div>
+                <button onclick="closeModal()" class="close-btn">&times;</button>
             </div>
             <div id="modal-details"></div>
         </div>
