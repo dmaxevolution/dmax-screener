@@ -4,8 +4,13 @@ from datetime import datetime
 import pandas as pd
 import yfinance as yf
 
-# 100 Emiten BEI Pilihan (Liquid, Market Cap Bagus, Potensial Swing Trading)
+# 105 Emiten BEI Pilihan (Termasuk BMRS, JGLE, KOTA, BACH, BNBR)
 TICKERS_CONFIG = [
+    # Emiten Tambahan Permintaan
+    {"ticker": "BMRS", "sector": "Financials"}, {"ticker": "JGLE", "sector": "Consumer Cyclicals"},
+    {"ticker": "KOTA", "sector": "Real Estate"}, {"ticker": "BACH", "sector": "Energy"},
+    {"ticker": "BNBR", "sector": "Industrials"},
+    
     # Banking & Financials
     {"ticker": "BBCA", "sector": "Financials"}, {"ticker": "BBRI", "sector": "Financials"},
     {"ticker": "BMRI", "sector": "Financials"}, {"ticker": "BBNI", "sector": "Financials"},
@@ -82,18 +87,15 @@ def calculate_rsi(series, period=14):
 
 def calculate_power_score(close, open_val, high, low, ema20, ema50, rsi):
     score = 5.0
-    # Evaluasi Momentum RSI
     if 50 <= rsi <= 65: score += 1.5
     elif rsi > 65: score += 0.5
-    elif rsi <= 35: score += 1.0  # Dip buying opportunity
+    elif rsi <= 35: score += 1.0
     elif rsi < 30: score -= 1.0
 
-    # Trend EMA Cross
     if close > ema20 and ema20 > ema50: score += 2.0
     elif close > ema20: score += 1.0
     elif close < ema20 and ema20 < ema50: score -= 2.0
 
-    # Strong Body Candlestick
     body = abs(close - open_val)
     candle_range = high - low
     if candle_range > 0:
@@ -153,10 +155,9 @@ def fetch_data():
 
             power_score = calculate_power_score(close_val, open_val, high_val, low_val, ema20, ema50, rsi)
 
-            # Risk/Reward Setup Swing Trading
             recent_low = float(df['Low'].tail(15).min())
             recent_high = float(df['High'].tail(15).max())
-            stop_loss = int(round(recent_low * 0.98))  # 2% di bawah low terendah
+            stop_loss = int(round(recent_low * 0.98))
             risk = max(close_val - stop_loss, close_val * 0.03)
             
             take_profit_1 = int(round(close_val + (risk * 1.5)))
@@ -183,7 +184,6 @@ def fetch_data():
         except Exception:
             continue
 
-    # Urutkan berdasarkan Power Score tertinggi
     all_stocks = sorted(all_stocks, key=lambda x: x["power_score"], reverse=True)
 
     output = {

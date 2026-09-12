@@ -21,24 +21,26 @@
                 <span id="ihsg-pct" class="pct">-</span>
             </div>
             
-            <div class="search-box">
-                <input type="text" id="search-input" placeholder="Cari emiten..." oninput="filterStocks()">
-                <button class="clear-search-btn" id="clear-search" onclick="clearSearchBox()">&times;</button>
+            <div class="search-wrapper">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Cari emiten (Enter=Fav)..." onkeyup="filterStocks(event)">
+                </div>
+                <button class="clear-search-btn" onclick="clearSearch()" title="Hapus Pencarian">&times;</button>
             </div>
         </div>
     </header>
 
     <main class="dashboard-container">
-        <!-- Favorite Section (Pencarian/Blink dipindah ke sini) -->
-        <section id="favorite-section">
+        <!-- Favorite Watchlist (Permanen di Local/IndexedDB, Bisa Dihapus lewat Bintang) -->
+        <section id="favorite-section" style="display: none;">
             <div class="section-header">
-                <h3>Emiten Favorit / Hasil Pencarian</h3>
-                <button onclick="clearAllFavorites()" style="background:none; border:none; color:var(--red-bearish); font-size:10px; cursor:pointer;">Hapus Backup DB</button>
+                <h3>⭐ Favorite Tersimpan</h3>
+                <span class="badge-live">PERMANENT</span>
             </div>
-            <div id="favorite-list" class="stocks-grid"></div>
+            <div id="favorite-grid" class="stocks-grid"></div>
         </section>
 
-        <!-- Entry Signal Radar (Diposisikan di bawah Favorite) -->
+        <!-- Sinyal Setup Entry Swing (Ditempatkan di Bawah Favorite) -->
         <section>
             <div class="section-header">
                 <h3>Sinyal Setup Entry Swing</h3>

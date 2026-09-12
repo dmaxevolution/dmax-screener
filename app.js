@@ -1,15 +1,49 @@
 /**
- * app.js - Controller, UI Rotator, Search Blink & Storage Manager
+ * app.js - Controller, UI Rotator, Persistent Local/IndexedDB Storage & Dynamic Renderer
  */
 
 let stocksData = [];
-let favoriteTickers = JSON.parse(localStorage.getItem('idx_favorites')) || [];
+let favoriteTickers = [];
 let currentPhase = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
+    loadFavoritesFromStorage();
     fetchData();
     startUIRotator();
 });
+
+// Manajemen Penyimpanan Permanen (Local/IndexedDB Backup & Delete)
+function loadFavoritesFromStorage() {
+    try {
+        const saved = localStorage.getItem('idx_favorites_permanent');
+        if (saved) {
+            favoriteTickers = JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error("Gagal memuat data favorite:", e);
+    }
+}
+
+function saveFavoritesToStorage() {
+    try {
+        localStorage.setItem('idx_favorites_permanent', JSON.stringify(favoriteTickers));
+    } catch (e) {
+        console.error("Gagal menyimpan data favorite secara permanen:", e);
+    }
+}
+
+function toggleFavorite(ticker, event) {
+    if (event) event.stopPropagation();
+    if (favoriteTickers.includes(ticker)) {
+        favoriteTickers = favoriteTickers.filter(t => t !== ticker);
+    } else {
+        favoriteTickers.push(ticker);
+    }
+    saveFavoritesToStorage();
+    renderFavoritesSection();
+    renderAllStocksGrid(stocksData);
+    renderTop10Compact(stocksData.slice(0, 10));
+}
 
 async function fetchData() {
     try {
@@ -42,43 +76,24 @@ function renderIHSGHeader(ihsg) {
     pctEl.className = `pct ${isUp ? 'up' : 'down'}`;
 }
 
-// Toggle Favorite dengan backup permanent localStorage & efek blink
-function toggleFavorite(ticker, event) {
-    event.stopPropagation();
-    if (favoriteTickers.includes(ticker)) {
-        favoriteTickers = favoriteTickers.filter(t => t !== ticker);
-    } else {
-        favoriteTickers.push(ticker);
-    }
-    localStorage.setItem('idx_favorites', JSON.stringify(favoriteTickers));
-    
-    renderFavoritesSection();
-    renderAllStocksGrid(stocksData);
-}
-
+// Render Bagian Favorite
 function renderFavoritesSection() {
-    const container = document.getElementById('favorite-list');
-    if (!container) return;
-    container.innerHTML = '';
+    const section = document.getElementById('favorite-section');
+    const grid = document.getElementById('favorite-grid');
+    if (!section || !grid) return;
 
-    const favStocks = stocksData.filter(s => favoriteTickers.includes(s.ticker));
-    if (favStocks.length === 0) {
-        container.innerHTML = `<div style="font-size:11px; color:var(--text-muted); grid-column: 1/-1;">Klik ikon bintang hitam pada kartu emiten untuk menyimpan ke Favorit.</div>`;
+    if (favoriteTickers.length === 0) {
+        section.style.display = 'none';
         return;
     }
 
-    favStocks.forEach(stock => {
-        const card = createStockCard(stock);
-        card.classList.add('blink-card'); // Efek kedip untuk hasil favorit
-        container.appendChild(card);
-    });
-}
+    section.style.display = 'block';
+    grid.innerHTML = '';
 
-function clearAllFavorites() {
-    favoriteTickers = [];
-    localStorage.removeItem('idx_favorites');
-    renderFavoritesSection();
-    renderAllStocksGrid(stocksData);
+    const favStocks = stocksData.filter(s => favoriteTickers.includes(s.ticker));
+    favStocks.forEach(stock => {
+        grid.appendChild(createStockCard(stock));
+    });
 }
 
 function renderEntrySection(stocks) {
@@ -88,7 +103,7 @@ function renderEntrySection(stocks) {
 
     const entryStocks = stocks.filter(s => {
         const strat = evaluateEntryStrategy(s);
-        return strat.entryStatus !== "WAIT" || strat.patternName !== "-";
+        return strat.entryStatus === "BUY" || strat.entryStatus === "ENTRY" || strat.patternName !== "-";
     });
 
     entryStocks.slice(0, 6).forEach(stock => {
@@ -96,28 +111,28 @@ function renderEntrySection(stocks) {
         const card = document.createElement('div');
         card.className = 'entry-card';
         
+        const isFav = favoriteTickers.includes(stock.ticker);
         const powerBarHTML = renderSignalPowerBar(stock.power_score || 5);
         const badgeHTML = getRotatorBadgeHTML(stock.ticker, analysis);
+        const statusBadgeHTML = renderStatusBadge(analysis);
         const isUp = stock.change_pct >= 0;
-        const isFav = favoriteTickers.includes(stock.ticker);
-        const actionBadge = getActionStatusBadge(analysis);
-
+        
         card.innerHTML = `
-            <button class="black-star-btn ${isFav ? 'favorited' : ''}" onclick="toggleFavorite('${stock.ticker}', event)">&#9733;</button>
+            <span class="black-star ${isFav ? 'favorited' : ''}" onclick="toggleFavorite('${stock.ticker}', event)">★</span>
             <div>
-                ${powerBarHTML}
-                <div class="stock-card-header">
-                    <span class="ticker">${stock.ticker}</span>
-                    <span class="sector-name">${stock.sector}</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding-right:16px;">
+                    <div>
+                        <span class="ticker">${stock.ticker}</span>
+                        <span class="sector-name" style="margin-left:6px;">${stock.sector}</span>
+                    </div>
+                    <div id="badge-rotator-${stock.ticker}">${badgeHTML}</div>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:6px;">
                     <div class="price-text">Rp ${stock.close.toLocaleString('id-ID')}</div>
                     <span class="pct ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${stock.change_pct}%</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
-                    <div id="badge-rotator-${stock.ticker}">${badgeHTML}</div>
-                    <div>${actionBadge}</div>
-                </div>
+                ${powerBarHTML}
+                ${statusBadgeHTML}
             </div>
         `;
         card.onclick = () => openModal(stock);
@@ -129,14 +144,20 @@ function renderTop10Compact(top10List) {
     const grid = document.getElementById('top10-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    top10List.forEach(stock => grid.appendChild(createStockCard(stock)));
+
+    top10List.forEach(stock => {
+        grid.appendChild(createStockCard(stock));
+    });
 }
 
 function renderAllStocksGrid(stocks) {
     const grid = document.getElementById('all-stocks-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    stocks.forEach(stock => grid.appendChild(createStockCard(stock)));
+
+    stocks.forEach(stock => {
+        grid.appendChild(createStockCard(stock));
+    });
 }
 
 function createStockCard(stock) {
@@ -147,42 +168,24 @@ function createStockCard(stock) {
     const powerBarHTML = renderSignalPowerBar(stock.power_score || 5);
     const analysis = evaluateEntryStrategy(stock);
     const badgeHTML = getRotatorBadgeHTML(stock.ticker, analysis);
-    const actionBadge = getActionStatusBadge(analysis);
+    const statusBadgeHTML = renderStatusBadge(analysis);
     
     card.innerHTML = `
-        <button class="black-star-btn ${isFav ? 'favorited' : ''}" onclick="toggleFavorite('${stock.ticker}', event)">&#9733;</button>
-        ${powerBarHTML}
+        <span class="black-star ${isFav ? 'favorited' : ''}" onclick="toggleFavorite('${stock.ticker}', event)">★</span>
         <div class="stock-card-header">
-            <div class="ticker">${stock.ticker}</div>
-            <div class="sector-name">${stock.sector}</div>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
             <div>
-                <div class="price-text">Rp ${stock.close.toLocaleString('id-ID')}</div>
-                <span class="pct ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${stock.change_pct}%</span>
+                <div class="ticker">${stock.ticker}</div>
+                <div class="sector-name">${stock.sector}</div>
             </div>
-            <div>${actionBadge}</div>
+            <span class="pct ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${stock.change_pct}%</span>
         </div>
+        <div class="price-text">Rp ${stock.close.toLocaleString('id-ID')}</div>
         <div style="margin-top:6px;" id="badge-rotator-${stock.ticker}">${badgeHTML}</div>
+        ${powerBarHTML}
+        ${statusBadgeHTML}
     `;
     card.onclick = () => openModal(stock);
     return card;
-}
-
-function getActionStatusBadge(analysis) {
-    let cssClass = "wait";
-    let text = analysis.actionLabel;
-    let icon = "";
-
-    if (analysis.entryStatus === "BUY") {
-        cssClass = "rocket";
-        icon = getCandleIconSVG("ROCKET");
-    } else if (analysis.entryStatus === "ENTRY") {
-        cssClass = "sand";
-        icon = getCandleIconSVG("SAND");
-    }
-
-    return `<span class="action-status-badge ${cssClass}">${icon} ${text}</span>`;
 }
 
 function getRotatorBadgeHTML(ticker, analysis) {
@@ -213,33 +216,58 @@ function startUIRotator() {
     }, 3000);
 }
 
-// Live Search dengan Blink & Tombol Clear X
-function filterStocks() {
-    const query = document.getElementById('search-input').value.toUpperCase();
-    const filtered = stocksData.filter(s => s.ticker.includes(query) || s.sector.toUpperCase().includes(query));
+// Logika Pencarian: Hasil otomatis masuk Favorite dengan Efek Blink 3x
+function filterStocks(event) {
+    const inputEl = document.getElementById('search-input');
+    const query = inputEl.value.toUpperCase().trim();
     
-    const grid = document.getElementById('all-stocks-grid');
-    grid.innerHTML = '';
-    filtered.forEach(stock => {
-        const card = createStockCard(stock);
-        if (query.length > 0) card.classList.add('blink-card'); // Efek kedip hasil pencarian
-        grid.appendChild(card);
-    });
+    const filtered = stocksData.filter(s => s.ticker.includes(query) || s.sector.toUpperCase().includes(query));
+    renderAllStocksGrid(filtered);
+
+    // Jika user menekan tombol Enter pada pencarian, masukkan hasil ke Favorite dan berikan efek blink 3x
+    if (event && event.key === 'Enter' && query !== '') {
+        filtered.forEach(stock => {
+            if (!favoriteTickers.includes(stock.ticker)) {
+                favoriteTickers.push(stock.ticker);
+            }
+        });
+        saveFavoritesToStorage();
+        renderFavoritesSection();
+        renderAllStocksGrid(stocksData);
+
+        // Tambahkan efek blink pada kartu favorite yang baru masuk
+        setTimeout(() => {
+            filtered.forEach(stock => {
+                const favCard = document.querySelector(`#favorite-grid`);
+                // Cari card spesifik lalu tambahkan class blink
+                if (favCard) {
+                    const cards = favCard.querySelectorAll('.stock-card-compact');
+                    cards.forEach(c => {
+                        if (c.textContent.includes(stock.ticker)) {
+                            c.classList.add('blink-effect');
+                            setTimeout(() => c.classList.remove('blink-effect'), 1800);
+                        }
+                    });
+                }
+            });
+        }, 100);
+    }
 }
 
-function clearSearchBox() {
-    document.getElementById('search-input').value = '';
-    filterStocks();
+// Tombol X untuk menghapus pencarian
+function clearSearch() {
+    const inputEl = document.getElementById('search-input');
+    inputEl.value = '';
+    renderAllStocksGrid(stocksData);
+    inputEl.focus();
 }
 
-// Modal Details
 function openModal(stock) {
     document.getElementById('modal-ticker').textContent = stock.ticker;
     document.getElementById('modal-sector').textContent = stock.sector;
     const details = document.getElementById('modal-details');
 
     details.innerHTML = `
-        <div style="margin-bottom:8px;">${renderSignalPowerBar(stock.power_score || 5)}</div>
         <div class="modal-row"><span>Penutupan Murni</span><span style="color:#fff;">Rp ${stock.close.toLocaleString('id-ID')}</span></div>
         <div class="modal-row"><span>Open / High / Low</span><span>${stock.open} / ${stock.high} / ${stock.low}</span></div>
         <div class="modal-row"><span>RSI (14)</span><span>${stock.rsi}</span></div>
@@ -247,6 +275,10 @@ function openModal(stock) {
         <div class="modal-row"><span>Stop Loss (SL)</span><span style="color:var(--red-bearish);">Rp ${stock.stop_loss.toLocaleString('id-ID')}</span></div>
         <div class="modal-row"><span>Target Profit 1 (TP1)</span><span style="color:var(--green-bullish);">Rp ${stock.take_profit_1.toLocaleString('id-ID')}</span></div>
         <div class="modal-row"><span>Target Profit 2 (TP2)</span><span style="color:var(--green-bullish);">Rp ${stock.take_profit_2.toLocaleString('id-ID')}</span></div>
+        <div style="margin-top:12px;">
+            <span style="font-size:11px; color:var(--text-muted); font-weight:700;">POWER SCORE</span>
+            ${renderSignalPowerBar(stock.power_score || 5)}
+        </div>
     `;
     document.getElementById('stock-modal').classList.remove('hidden');
 }
