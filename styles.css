@@ -54,46 +54,39 @@ header.main-header {
     gap: 10px;
 }
 
-/* Badge IHSG */
-.ihsg-compact-badge {
-    display: flex;
+/* Badge Status Strategi: ENTRY / WAIT / DANGER */
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    background: rgba(15, 18, 24, 0.8);
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-    border: 1px solid var(--border-gold);
+    justify-content: center;
 }
 
-.ihsg-compact-badge .value {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
+.status-badge.entry {
+    color: var(--neon-green);
+    background: rgba(0, 255, 136, 0.08);
+    border: 1px solid rgba(0, 255, 136, 0.4);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
 }
 
-.ihsg-compact-badge .pct {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 12px;
+.status-badge.wait {
+    color: var(--gold-accent);
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
 }
-.ihsg-compact-badge .pct.up { color: var(--neon-green); background: rgba(0, 255, 136, 0.1); }
-.ihsg-compact-badge .pct.down { color: var(--neon-red); background: rgba(255, 23, 68, 0.1); }
 
-.search-box input {
-    background: #0d1016;
-    border: 1px solid var(--border-color);
-    color: #fff;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-    outline: none;
-    transition: all 0.3s;
-}
-.search-box input:focus {
-    border-color: var(--gold-accent);
-    box-shadow: 0 0 10px var(--gold-glow);
+.status-badge.danger {
+    color: var(--neon-red);
+    background: rgba(255, 23, 68, 0.08);
+    border: 1px solid rgba(255, 23, 68, 0.4);
+    box-shadow: 0 0 10px rgba(255, 23, 68, 0.2);
 }
 
 /* Sections */
