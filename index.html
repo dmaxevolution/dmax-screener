@@ -1,94 +1,87 @@
-/**
- * indicators.js - Analysis Engine & Dynamic SVG Generator
- */
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDX Swing Trading Screener</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
 
-function getCandleIconSVG(patternType) {
-    switch (patternType) {
-        case 'HAMMER':
-            return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="2" x2="12" y2="22"/><rect x="8" y="2" width="8" height="6" fill="currentColor" rx="1"/></svg>`;
-        case 'ENGULFING_BULL':
-            return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="8" x2="6" y2="18" stroke="#ef4444"/><rect x="4" y="10" width="4" height="6" fill="#ef4444"/><line x1="16" y1="2" x2="16" y2="22"/><rect x="13" y="4" width="6" height="15" fill="currentColor" rx="1"/></svg>`;
-        case 'ENGULFING_BEAR':
-            return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="8" x2="6" y2="18" stroke="#10b981"/><rect x="4" y="10" width="4" height="6" fill="#10b981"/><line x1="16" y1="2" x2="16" y2="22"/><rect x="13" y="4" width="6" height="15" fill="currentColor" rx="1"/></svg>`;
-        case 'G_CROSS':
-            return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 18L21 6" stroke="#10b981"/><path d="M3 6L21 18" stroke="#3b82f6"/><circle cx="12" cy="12" r="2" fill="#f59e0b"/></svg>`;
-        default:
-            return '';
-    }
-}
-
-function detectCandlePattern(open, high, low, close, prevOpen, prevClose) {
-    const body = Math.abs(close - open);
-    const range = high - low;
-    const isBullish = close > open;
-    const isBearish = close < open;
-    const upperShadow = high - Math.max(open, close);
-    const lowerShadow = Math.min(open, close) - low;
-
-    if (range === 0) return { name: "-", type: "NEUTRAL", iconKey: "" };
-
-    if (prevClose < prevOpen && isBullish && close >= prevOpen && open <= prevClose) {
-        return { name: "B-ENGULF", type: "BULLISH", iconKey: "ENGULFING_BULL" };
-    }
-    if (prevClose > prevOpen && isBearish && open >= prevClose && close <= prevOpen) {
-        return { name: "BEAR-ENGULF", type: "BEARISH", iconKey: "ENGULFING_BEAR" };
-    }
-    if (isBullish && lowerShadow >= 2 * body && upperShadow <= body * 0.3) {
-        return { name: "B-HAMMER", type: "BULLISH", iconKey: "HAMMER" };
-    }
-
-    return { name: "-", type: "NEUTRAL", iconKey: "" };
-}
-
-function evaluateEntryStrategy(stock) {
-    const candle = detectCandlePattern(
-        stock.open, stock.high, stock.low, stock.close,
-        stock.prev_open, stock.prev_close
-    );
-
-    const isGoldenCross = stock.ema20 > stock.ema50;
-    const isOversold = stock.rsi <= 40;
-
-    let entryStatus = "NEUTRAL";
-    if ((isOversold || candle.type === "BULLISH") && isGoldenCross) {
-        entryStatus = "BUY_ENTRY";
-    }
-
-    return {
-        entryStatus,
-        patternName: candle.name,
-        patternType: candle.type,
-        iconKey: candle.iconKey,
-        isGoldenCross
-    };
-}
-
-// Power Score Bar di Atas Nama Emiten dengan Nilai Diperbesar
-function renderSignalPowerBar(powerScore) {
-    const score = Math.min(10, Math.max(1, Math.round(powerScore)));
-    const activeClass = score >= 6 ? "active-green" : "active-red";
-
-    let barsHTML = '<div class="power-bars">';
-    for (let i = 1; i <= 10; i++) {
-        barsHTML += `<div class="bar-segment ${i <= score ? activeClass : ''}"></div>`;
-    }
-    barsHTML += '</div>';
-
-    return `
-        <div class="power-container-top">
-            ${barsHTML}
-            <span class="power-val">${powerScore}</span>
+    <header class="main-header">
+        <div class="brand-container">
+            <div class="brand-title">IDX TERMINAL</div>
+            <div class="subtitle">Swing Trading Screener</div>
         </div>
-    `;
-}
 
-// Render Kolom Action: Rocket (BUY), Pasir/Timed (ENTRY), Wait
-function renderActionColumn(stock, analysis) {
-    if (analysis.entryStatus === "BUY_ENTRY") {
-        return `<div class="action-badge buy">🚀 BUY</div>`;
-    } else if (stock.rsi <= 45 || analysis.patternType === "BULLISH") {
-        return `<div class="action-badge entry">⏳ ENTRY</div>`;
-    } else {
-        return `<div class="action-badge wait">⏸️ WAIT</div>`;
-    }
-}
+        <div class="header-right">
+            <div class="ihsg-compact-badge">
+                <span class="label">IHSG</span>
+                <span id="ihsg-val" class="value">-</span>
+                <span id="ihsg-pct" class="pct">-</span>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Cari emiten..." oninput="handleSearchInput()">
+                <button id="clear-search" class="clear-search-btn" onclick="clearSearch()">&times;</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- Favorite Section (IndexedDB Backup) -->
+        <section id="favorite-section" class="hidden">
+            <div class="section-header">
+                <h3>Emiten Favorite (DB)</h3>
+                <span class="badge-live" style="background:rgba(245,158,11,0.15); color:var(--yellow-accent);">SAVED</span>
+            </div>
+            <div id="favorite-list" class="stocks-grid"></div>
+        </section>
+
+        <!-- Barisan Sinyal Setup Entry Swing (Dipindah ke bawah Favorite) -->
+        <section>
+            <div class="section-header">
+                <h3>Sinyal Setup Entry Swing</h3>
+                <span class="badge-live">LIVE RADAR</span>
+            </div>
+            <div id="entry-list" class="entry-grid"></div>
+        </section>
+
+        <!-- Top 10 High Power Watchlist -->
+        <section>
+            <div class="section-header">
+                <h3>Top 10 High Power Score</h3>
+            </div>
+            <div id="top10-grid" class="stocks-grid"></div>
+        </section>
+
+        <!-- All Stocks Grid -->
+        <section style="margin-bottom: 40px;">
+            <div class="section-header">
+                <h3>Semua Emiten Pilihan BEI (<span id="total-emiten-count">0</span>)</h3>
+            </div>
+            <div id="all-stocks-grid" class="stocks-grid"></div>
+        </section>
+    </main>
+
+    <!-- Modal Detail Emiten -->
+    <div id="stock-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-ticker"></h2>
+                    <span id="modal-sector" class="sector-badge"></span>
+                </div>
+                <button onclick="closeModal()" class="close-btn">&times;</button>
+            </div>
+            <div id="modal-details"></div>
+            <div style="margin-top: 14px; display: flex; gap: 8px;">
+                <button id="modal-fav-btn" onclick="toggleCurrentModalFavorite()" style="flex:1; padding:8px; border-radius:6px; background:var(--accent-blue); color:#fff; border:none; font-weight:700; cursor:pointer; font-size:11px;">Simpan ke DB</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="indicators.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
