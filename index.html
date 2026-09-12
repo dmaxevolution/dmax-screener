@@ -3,47 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Strategy Dashboard</title>
+    <title>IDX Luxury Screener</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <!-- Header Utama (IHSG Pindah ke Sini) -->
     <header class="main-header">
         <div class="brand-title">IDX ANALYTICS</div>
-        <div id="ihsg-header-badge" class="ihsg-compact-badge">
+        <div class="ihsg-compact-badge">
             <span>IHSG</span>
-            <span class="value" id="ihsg-val">--</span>
-            <span id="ihsg-pct" class="pct">--</span>
+            <span id="ihsg-val" class="value">-</span>
+            <span id="ihsg-pct" class="pct">-</span>
         </div>
-        <div class="search-box">
-            <input type="text" id="search-input" placeholder="Cari emiten...">
-        </div>
+        <div style="font-size:12px; color:var(--gold-accent); font-weight:700;" id="total-emiten-count">0 Emiten BEI</div>
     </header>
 
-    <!-- Seksi ENTRY (Bekas Slot IHSG Lama) -->
-    <section class="entry-container">
-        <h3>STRATEGI ENTRY (RSI + EMA CROSS + CANDLE)</h3>
-        <div id="entry-list">
-            <!-- Rendered via JS -->
-        </div>
+    <section>
+        <h3>Entry Setup Signal</h3>
+        <div id="entry-list"></div>
     </section>
 
-    <!-- Seksi TOP 10 Compact Cards -->
-    <section class="top10-container">
-        <h3 style="padding: 0 16px;">TOP 10 WATCHLIST</h3>
-        <div id="top10-grid" class="top10-grid">
-            <!-- Rendered via JS -->
-        </div>
+    <section>
+        <h3>Top 10 Watchlist</h3>
+        <div id="top10-grid" class="top10-grid"></div>
     </section>
 
-    <!-- Modal Popup Detail Top 10 -->
+    <section style="margin-bottom: 40px;">
+        <h3>Semua Emiten BEI (120+)</h3>
+        <div id="all-stocks-grid" class="top10-grid"></div>
+    </section>
+
+    <!-- Modal Detail Emiten -->
     <div id="stock-modal" class="modal-overlay hidden">
         <div class="modal-content">
-            <h2 id="modal-ticker">--</h2>
-            <hr style="border-color:#2a2e39;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h2 id="modal-ticker" style="margin:0; font-size:18px; color:var(--gold-accent);"></h2>
+                <button onclick="closeModal()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">&times;</button>
+            </div>
             <div id="modal-details"></div>
-            <button onclick="closeModal()" style="margin-top:15px; background:#363c4e; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Tutup</button>
         </div>
     </div>
 
