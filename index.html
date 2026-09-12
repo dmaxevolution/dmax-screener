@@ -1,168 +1,53 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Screener Saham Pro - Swing Entry</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        gray: {
-                            750: '#2d3748',
-                            850: '#1a202c',
-                            950: '#0d1117',
-                        }
-                    },
-                    animation: {
-                        'signal-blink': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
-    </script>
+    <title>Trading Strategy Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen font-sans antialiased pb-12">
+<body>
 
-    <!-- HEADER & NAVBAR -->
-    <header class="sticky top-0 z-50 bg-gray-900/90 backdrop-blur border-b border-gray-800 px-4 py-3">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <div class="bg-green-500 text-black font-black text-lg px-2.5 py-1 rounded-lg tracking-wider">PRO</div>
-                <div>
-                    <h1 class="font-bold text-base md:text-lg text-white leading-tight">Stock Screener Swing</h1>
-                    <p class="text-[11px] text-gray-400">Update Terakhir: <span id="last-updated" class="text-gray-300 font-medium">-</span></p>
-                </div>
-            </div>
-
-            <!-- SEARCH BAR PERBAIKAN -->
-            <div class="relative flex-1 max-w-xs min-w-[200px]">
-                <input 
-                    type="text" 
-                    id="search-input" 
-                    onkeyup="handleSearchInput(event)"
-                    placeholder="Cari Kode Emiten (misal: BBCA)..." 
-                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 uppercase tracking-wider"
-                >
-                <button onclick="executeSearch()" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs bg-green-600 hover:bg-green-500 text-white px-2 py-0.5 rounded font-bold">
-                    Cari
-                </button>
-            </div>
-
-            <!-- IHSG CARD -->
-            <div class="flex items-center gap-3 bg-gray-800/80 border border-gray-700/60 rounded-lg px-3 py-1.5 text-xs">
-                <span class="text-gray-400 font-semibold">IHSG:</span>
-                <span id="ihsg-header-close" class="font-bold text-white">-</span>
-                <span id="ihsg-header-pct" class="font-bold text-green-400">-</span>
-            </div>
+    <!-- Header Utama (IHSG Pindah ke Sini) -->
+    <header class="main-header">
+        <div class="brand-title">IDX ANALYTICS</div>
+        <div id="ihsg-header-badge" class="ihsg-compact-badge">
+            <span>IHSG</span>
+            <span class="value" id="ihsg-val">--</span>
+            <span id="ihsg-pct" class="pct">--</span>
+        </div>
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Cari emiten...">
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 mt-6 space-y-8">
+    <!-- Seksi ENTRY (Bekas Slot IHSG Lama) -->
+    <section class="entry-container">
+        <h3>STRATEGI ENTRY (RSI + EMA CROSS + CANDLE)</h3>
+        <div id="entry-list">
+            <!-- Rendered via JS -->
+        </div>
+    </section>
 
-        <!-- SECTION BARU: EMITEN SIAP ENTRY (RANKED 1 - N BY SAFETY) -->
-        <section>
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-2">
-                    <span class="text-green-400 text-xl">🎯</span>
-                    <h2 class="text-lg font-bold text-white tracking-wide">EMITEN SIAP ENTRY (Ranked 1, 2, 3...)</h2>
-                </div>
-                <span class="text-xs text-gray-400 bg-gray-800 px-2.5 py-1 rounded-full border border-gray-700">Diurutkan Berdasarkan Keamanan & Fundamental</span>
-            </div>
+    <!-- Seksi TOP 10 Compact Cards -->
+    <section class="top10-container">
+        <h3 style="padding: 0 16px;">TOP 10 WATCHLIST</h3>
+        <div id="top10-grid" class="top10-grid">
+            <!-- Rendered via JS -->
+        </div>
+    </section>
 
-            <div id="ready-entry-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <!-- Diberi Render dari JS -->
-            </div>
-        </section>
-
-        <!-- SECTION TOP 10 ENTRY -->
-        <section class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-base font-bold text-yellow-400 flex items-center gap-2">
-                    <span>⚡</span> TOP 10 HIGH POWER ENTRY
-                </h2>
-            </div>
-
-            <!-- Desktop Table Top 10 -->
-            <div class="hidden md:block overflow-x-auto">
-                <table class="w-full text-xs text-left">
-                    <thead class="bg-gray-800/60 text-gray-400 uppercase border-b border-gray-700">
-                        <tr>
-                            <th class="p-2.5">Rank</th>
-                            <th class="p-2.5">Ticker</th>
-                            <th class="p-2.5">Harga</th>
-                            <th class="p-2.5">Change</th>
-                            <th class="p-2.5">Power</th>
-                            <th class="p-2.5">Stop Loss</th>
-                            <th class="p-2.5">Take Profit</th>
-                        </tr>
-                    </thead>
-                    <tbody id="top-10-data" class="divide-y divide-gray-800"></tbody>
-                </table>
-            </div>
-
-            <!-- Mobile Top 10 -->
-            <div id="top-10-mobile-cards" class="grid grid-cols-1 gap-3 md:hidden"></div>
-        </section>
-
-        <!-- TABS KATEGORI -->
-        <section>
-            <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-800 text-xs">
-                <button id="tab-entry_now" onclick="switchTab('entry_now')" class="tab-btn px-4 py-2 rounded-lg font-bold whitespace-nowrap bg-green-950 text-green-400 border border-green-500/50">
-                    Siap Entry (7-9 Bar) (<span id="count-entry_now">0</span>)
-                </button>
-                <button id="tab-swing_setup" onclick="switchTab('swing_setup')" class="tab-btn px-4 py-2 rounded-lg font-bold whitespace-nowrap bg-gray-800 text-gray-300">
-                    Swing Setup (<span id="count-swing_setup">0</span>)
-                </button>
-                <button id="tab-top_gainers" onclick="switchTab('top_gainers')" class="tab-btn px-4 py-2 rounded-lg font-bold whitespace-nowrap bg-gray-800 text-gray-300">
-                    Top Gainers (<span id="count-top_gainers">0</span>)
-                </button>
-                <button id="tab-top_movers" onclick="switchTab('top_movers')" class="tab-btn px-4 py-2 rounded-lg font-bold whitespace-nowrap bg-gray-800 text-gray-300">
-                    Top Movers (<span id="count-top_movers">0</span>)
-                </button>
-                <button id="tab-bluechips" onclick="switchTab('bluechips')" class="tab-btn px-4 py-2 rounded-lg font-bold whitespace-nowrap bg-gray-800 text-gray-300">
-                    Bluechips (<span id="count-bluechips">0</span>)
-                </button>
-                <button id="tab-pantauan" onclick="switchTab('pantauan')" class="tab-btn px-4 py-2 rounded-lg font-bold whitespace-nowrap bg-gray-800 text-yellow-400 border border-yellow-500/30">
-                    Pantauan Saya (<span id="count-pantauan">0</span>)
-                </button>
-                <button id="tab-all_stocks" onclick="switchTab('all_stocks')" class="tab-btn px-4 py-2 rounded-lg font-bold whitespace-nowrap bg-gray-800 text-gray-300">
-                    Semua (<span id="count-all_stocks">0</span>)
-                </button>
-            </div>
-
-            <!-- DESKTOP MAIN TABLE -->
-            <div class="hidden md:block overflow-x-auto mt-4 bg-gray-900 border border-gray-800 rounded-xl">
-                <table class="w-full text-xs text-left">
-                    <thead class="bg-gray-800/80 text-gray-400 uppercase border-b border-gray-700">
-                        <tr>
-                            <th class="p-3">Ticker</th>
-                            <th class="p-3">Harga</th>
-                            <th class="p-3">Change</th>
-                            <th class="p-3">EMA20</th>
-                            <th class="p-3">EMA50</th>
-                            <th class="p-3">RSI</th>
-                            <th class="p-3">Power Score</th>
-                            <th class="p-3">Stop Loss</th>
-                            <th class="p-3">Take Profit</th>
-                            <th class="p-3 text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="screener-data-desktop"></tbody>
-                </table>
-            </div>
-
-            <!-- MOBILE CARDS -->
-            <div id="screener-data-mobile" class="grid grid-cols-1 gap-3 md:hidden mt-4"></div>
-        </section>
-
-    </main>
+    <!-- Modal Popup Detail Top 10 -->
+    <div id="stock-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="modal-ticker">--</h2>
+            <hr style="border-color:#2a2e39;">
+            <div id="modal-details"></div>
+            <button onclick="closeModal()" style="margin-top:15px; background:#363c4e; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Tutup</button>
+        </div>
+    </div>
 
     <script src="indicators.js"></script>
-    <script src="render.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

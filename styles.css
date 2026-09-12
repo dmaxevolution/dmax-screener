@@ -1,0 +1,277 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+    --bg-main: #07080a;
+    --bg-card: #0f1218;
+    --bg-card-hover: #161a23;
+    --gold-accent: #d4af37;
+    --gold-glow: rgba(212, 175, 55, 0.25);
+    --border-color: #1e2330;
+    --border-gold: rgba(212, 175, 55, 0.3);
+    
+    --text-primary: #f8f9fa;
+    --text-muted: #7e879a;
+
+    --neon-green: #00ff88;
+    --green-glow: rgba(0, 255, 136, 0.4);
+    --neon-red: #ff1744;
+    --red-glow: rgba(255, 23, 68, 0.4);
+    --neutral-gray: #4a5366;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Header Luxury */
+header.main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: linear-gradient(180deg, #11141c 0%, #08090d 100%);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.brand-title {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--gold-accent);
+    text-shadow: 0 0 10px var(--gold-glow);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Badge IHSG */
+.ihsg-compact-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(15, 18, 24, 0.8);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    border: 1px solid var(--border-gold);
+}
+
+.ihsg-compact-badge .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+}
+
+.ihsg-compact-badge .pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+.ihsg-compact-badge .pct.up { color: var(--neon-green); background: rgba(0, 255, 136, 0.1); }
+.ihsg-compact-badge .pct.down { color: var(--neon-red); background: rgba(255, 23, 68, 0.1); }
+
+.search-box input {
+    background: #0d1016;
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.3s;
+}
+.search-box input:focus {
+    border-color: var(--gold-accent);
+    box-shadow: 0 0 10px var(--gold-glow);
+}
+
+/* Sections */
+section {
+    padding: 0 28px;
+    margin-top: 24px;
+}
+
+section h3 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+}
+
+/* Entry Cards Compact & Sleek */
+.entry-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 14px 20px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.entry-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-gold);
+    transform: translateX(4px);
+}
+
+.candle-tag {
+    background-color: #08090c;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+}
+.candle-tag.bullish { color: var(--neon-green); border: 1px solid rgba(0, 255, 136, 0.3); }
+.candle-tag.bearish { color: var(--neon-red); border: 1px solid rgba(255, 23, 68, 0.3); }
+.candle-tag.neutral { color: var(--text-muted); border: 1px solid var(--border-color); }
+
+/* Grid Cards */
+.top10-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+    gap: 14px;
+}
+
+.stock-card-compact {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.stock-card-compact:hover {
+    border-color: var(--gold-accent);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    transform: translateY(-3px);
+}
+
+.stock-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.stock-card-header .ticker {
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+.stock-card-body .price {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* 10 BAR SIGNAL POWER COMPONENT */
+.power-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.power-bars {
+    display: flex;
+    gap: 3px;
+}
+
+.bar-segment {
+    width: 6px;
+    height: 12px;
+    background-color: #1a1e29;
+    border-radius: 1px;
+    transition: all 0.3s ease;
+}
+
+/* State Visual Warna Signal Power */
+.bar-segment.bearish {
+    background-color: #d32f2f;
+}
+.bar-segment.strong-bearish {
+    background-color: var(--neon-red);
+    box-shadow: 0 0 8px var(--red-glow);
+    animation: blink-anim 0.9s infinite alternate;
+}
+
+.bar-segment.neutral {
+    background-color: var(--neutral-gray);
+}
+
+.bar-segment.bullish {
+    background-color: #2e7d32;
+}
+.bar-segment.strong-bullish {
+    background-color: var(--neon-green);
+    box-shadow: 0 0 8px var(--green-glow);
+    animation: blink-anim 0.9s infinite alternate;
+}
+
+.power-percentage {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+@keyframes blink-anim {
+    0% { opacity: 1; }
+    100% { opacity: 0.25; }
+}
+
+/* Modal Luxury Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(4, 5, 7, 0.88);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #0f1218;
+    padding: 28px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 450px;
+    border: 1px solid var(--border-gold);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+
+.modal-details-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+}
+.modal-details-row span:first-child { color: var(--text-muted); }
+.modal-details-row span:last-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+}
+
+.hidden { display: none !important; }
