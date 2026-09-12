@@ -1,7 +1,24 @@
 /**
- * indicators.js - Evaluasi Akumulasi Indikator untuk Status ENTRY / WAIT / DANGER
+ * indicators.js - Analysis Engine & Dynamic SVG Generator
  */
 
+// 1. Dynamic SVG Icon Generator (Revisi Poin No. 3)
+function getCandleIconSVG(patternType) {
+    switch (patternType) {
+        case 'HAMMER':
+            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="2" x2="12" y2="22"/><rect x="8" y="2" width="8" height="6" fill="currentColor" rx="1"/></svg>`;
+        case 'ENGULFING_BULL':
+            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="8" x2="6" y2="18" stroke="#ef4444"/><rect x="4" y="10" width="4" height="6" fill="#ef4444"/><line x1="16" y1="2" x2="16" y2="22"/><rect x="13" y="4" width="6" height="15" fill="currentColor" rx="1"/></svg>`;
+        case 'ENGULFING_BEAR':
+            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="8" x2="6" y2="18" stroke="#10b981"/><rect x="4" y="10" width="4" height="6" fill="#10b981"/><line x1="16" y1="2" x2="16" y2="22"/><rect x="13" y="4" width="6" height="15" fill="currentColor" rx="1"/></svg>`;
+        case 'G_CROSS':
+            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 18L21 6" stroke="#10b981"/><path d="M3 6L21 18" stroke="#3b82f6"/><circle cx="12" cy="12" r="2" fill="#f59e0b"/></svg>`;
+        default:
+            return '';
+    }
+}
+
+// 2. Candlestick Pattern Detection
 function detectCandlePattern(open, high, low, close, prevOpen, prevClose) {
     const body = Math.abs(close - open);
     const range = high - low;
@@ -10,84 +27,49 @@ function detectCandlePattern(open, high, low, close, prevOpen, prevClose) {
     const upperShadow = high - Math.max(open, close);
     const lowerShadow = Math.min(open, close) - low;
 
-    if (range === 0) return { name: "NONE", type: "NEUTRAL" };
+    if (range === 0) return { name: "-", type: "NEUTRAL", iconKey: "" };
 
     if (prevClose < prevOpen && isBullish && close >= prevOpen && open <= prevClose) {
-        return { name: "ENGULFING", type: "BULLISH" };
+        return { name: "B-ENGULF", type: "BULLISH", iconKey: "ENGULFING_BULL" };
     }
-
     if (prevClose > prevOpen && isBearish && open >= prevClose && close <= prevOpen) {
-        return { name: "ENGULFING", type: "BEARISH" };
+        return { name: "BEAR-ENGULF", type: "BEARISH", iconKey: "ENGULFING_BEAR" };
     }
-
     if (isBullish && lowerShadow >= 2 * body && upperShadow <= body * 0.3) {
-        return { name: "HAMMER", type: "BULLISH" };
+        return { name: "B-HAMMER", type: "BULLISH", iconKey: "HAMMER" };
     }
 
-    if (isBearish && upperShadow >= 2 * body && lowerShadow <= body * 0.3) {
-        return { name: "SHOOTING STAR", type: "BEARISH" };
-    }
-
-    return { name: "-", type: "NEUTRAL" };
+    return { name: "-", type: "NEUTRAL", iconKey: "" };
 }
 
-/**
- * Akumulasi Seluruh Indikator Menjadi Status Tunggal
- */
-function evaluateTradingStrategy(stock) {
+// 3. Strategy Evaluation Engine
+function evaluateEntryStrategy(stock) {
     const candle = detectCandlePattern(
         stock.open, stock.high, stock.low, stock.close,
         stock.prev_open, stock.prev_close
     );
 
     const isGoldenCross = stock.ema20 > stock.ema50;
-    const isDeathCross = stock.ema20 < stock.ema50;
-    const powerScore = stock.power_score || 5.0;
+    const isOversold = stock.rsi <= 40;
 
-    let status = "WAIT"; // Default State
-
-    // Kaidah Siap ENTRY (Akumulasi Sinyal Positif Murni)
-    if (powerScore >= 7.0 || (isGoldenCross && candle.type === "BULLISH" && stock.rsi <= 55)) {
-        status = "ENTRY";
-    } 
-    // Kaidah Sinyal Bahaya/DANGER (Akumulasi Sinyal Negatif Murni)
-    else if (powerScore <= 3.9 || (isDeathCross && candle.type === "BEARISH") || stock.rsi >= 70) {
-        status = "DANGER";
+    let entryStatus = "NEUTRAL";
+    if ((isOversold || candle.type === "BULLISH") && isGoldenCross) {
+        entryStatus = "BUY_ENTRY";
     }
 
     return {
-        status: status,
+        entryStatus,
         patternName: candle.name,
-        patternType: candle.type
+        patternType: candle.type,
+        iconKey: candle.iconKey,
+        isGoldenCross
     };
 }
 
-/**
- * Render 10 Bar Signal Power
- */
+// 4. Power Score Bar Visualizer
 function renderSignalPowerBar(powerScore) {
     const score = Math.min(10, Math.max(1, Math.round(powerScore)));
-    const percentage = score * 10;
-    
-    let activeClass = "neutral";
-    let textColor = "#7e879a";
-
-    if (percentage <= 20) {
-        activeClass = "strong-bearish";
-        textColor = "#ff1744";
-    } else if (percentage === 30) {
-        activeClass = "bearish";
-        textColor = "#d32f2f";
-    } else if (percentage >= 40 && percentage <= 60) {
-        activeClass = "neutral";
-        textColor = "#7e879a";
-    } else if (percentage >= 70 && percentage <= 80) {
-        activeClass = "bullish";
-        textColor = "#00e676";
-    } else if (percentage >= 90) {
-        activeClass = "strong-bullish";
-        textColor = "#00ff88";
-    }
+    const activeClass = score >= 6 ? "active-green" : "active-red";
 
     let barsHTML = '<div class="power-bars">';
     for (let i = 1; i <= 10; i++) {
@@ -98,7 +80,7 @@ function renderSignalPowerBar(powerScore) {
     return `
         <div class="power-container">
             ${barsHTML}
-            <span class="power-percentage" style="color: ${textColor}">${percentage}%</span>
+            <span class="power-val">${powerScore}</span>
         </div>
     `;
 }
