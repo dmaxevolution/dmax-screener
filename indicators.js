@@ -1,5 +1,5 @@
 /**
- * indicators.js - Analysis Engine & 10-Bar Signal Power Visualizer
+ * indicators.js - Evaluasi Akumulasi Indikator untuk Status ENTRY / WAIT / DANGER
  */
 
 function detectCandlePattern(open, high, low, close, prevOpen, prevClose) {
@@ -31,7 +31,10 @@ function detectCandlePattern(open, high, low, close, prevOpen, prevClose) {
     return { name: "-", type: "NEUTRAL" };
 }
 
-function evaluateEntryStrategy(stock) {
+/**
+ * Akumulasi Seluruh Indikator Menjadi Status Tunggal
+ */
+function evaluateTradingStrategy(stock) {
     const candle = detectCandlePattern(
         stock.open, stock.high, stock.low, stock.close,
         stock.prev_open, stock.prev_close
@@ -39,25 +42,28 @@ function evaluateEntryStrategy(stock) {
 
     const isGoldenCross = stock.ema20 > stock.ema50;
     const isDeathCross = stock.ema20 < stock.ema50;
-    const isOversold = stock.rsi <= 35;
-    const isOverbought = stock.rsi >= 65;
+    const powerScore = stock.power_score || 5.0;
 
-    let entryStatus = "NEUTRAL";
-    if (isOversold && isGoldenCross && candle.type === "BULLISH") {
-        entryStatus = "BUY_ENTRY";
-    } else if (isOverbought && isDeathCross && candle.type === "BEARISH") {
-        entryStatus = "SELL_ENTRY";
+    let status = "WAIT"; // Default State
+
+    // Kaidah Siap ENTRY (Akumulasi Sinyal Positif Murni)
+    if (powerScore >= 7.0 || (isGoldenCross && candle.type === "BULLISH" && stock.rsi <= 55)) {
+        status = "ENTRY";
+    } 
+    // Kaidah Sinyal Bahaya/DANGER (Akumulasi Sinyal Negatif Murni)
+    else if (powerScore <= 3.9 || (isDeathCross && candle.type === "BEARISH") || stock.rsi >= 70) {
+        status = "DANGER";
     }
 
     return {
-        entryStatus,
+        status: status,
         patternName: candle.name,
         patternType: candle.type
     };
 }
 
 /**
- * Visualizer Generator: 10 Bar Signal Power
+ * Render 10 Bar Signal Power
  */
 function renderSignalPowerBar(powerScore) {
     const score = Math.min(10, Math.max(1, Math.round(powerScore)));
