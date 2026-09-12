@@ -5,7 +5,7 @@
     --bg-header: #121721;
     --bg-card: #161c28;
     --bg-card-hover: #1e2638;
-    --bg-entry-card: rgba(37, 99, 235, 0.08); /* Biru lembut untuk Entry Swing */
+    --bg-entry-swing: rgba(37, 99, 235, 0.08);
     
     --accent-blue: #2563eb;
     --border-color: #232d3f;
@@ -44,26 +44,14 @@ header.main-header {
     position: sticky;
     top: 0;
     z-index: 100;
-    gap: 10px;
     width: 100%;
 }
 
 .brand-container { display: flex; flex-direction: column; }
-.brand-title {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    color: var(--text-primary);
-}
+.brand-title { font-size: 15px; font-weight: 800; letter-spacing: 1px; color: var(--text-primary); }
 .subtitle { font-size: 10px; color: var(--text-muted); font-weight: 500; }
 
-.header-right { 
-    display: flex; 
-    align-items: center; 
-    gap: 10px; 
-    flex-wrap: wrap;
-    max-width: 100%;
-}
+.header-right { display: flex; align-items: center; gap: 8px; max-width: 100%; }
 
 .ihsg-compact-badge {
     display: flex;
@@ -71,7 +59,7 @@ header.main-header {
     gap: 6px;
     background: #090d14;
     padding: 4px 10px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 11px;
     border: 1px solid var(--border-color);
 }
@@ -88,16 +76,12 @@ header.main-header {
 .ihsg-compact-badge .pct.down { color: var(--red-bearish); background: var(--red-bg); }
 
 /* Search Box dengan Tombol X */
-.search-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
+.search-box { position: relative; display: flex; align-items: center; }
 .search-box input {
     background: #090d14;
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 6px 28px 6px 12px;
+    padding: 6px 28px 6px 10px;
     border-radius: 6px;
     font-size: 12px;
     outline: none;
@@ -143,43 +127,62 @@ header.main-header {
     border-radius: 4px;
 }
 
-/* Grids */
+/* Grids Responsif HP */
 .stocks-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 10px;
 }
 .entry-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 10px;
 }
 
-/* Card Styling & Card Biru Lembut untuk Entry Swing */
-.stock-card-compact {
+/* Card Styling */
+.stock-card-compact, .entry-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 12px;
+    padding: 10px;
     cursor: pointer;
-    transition: all 0.2s ease;
     position: relative;
+    transition: all 0.2s ease;
 }
-
 .entry-card {
-    background: var(--bg-entry-card);
-    border: 1px solid rgba(59, 130, 246, 0.4);
-    border-radius: 8px;
-    padding: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
+    background: var(--bg-entry-swing);
+    border-color: rgba(37, 99, 235, 0.3);
 }
-
 .stock-card-compact:hover, .entry-card:hover {
     background: var(--bg-card-hover);
     border-color: var(--border-highlight);
     transform: translateY(-2px);
+}
+
+/* Animasi Blink 3x */
+@keyframes blinkEffect {
+    0% { opacity: 1; border-color: var(--border-highlight); transform: scale(1); }
+    50% { opacity: 0.3; border-color: var(--yellow-accent); transform: scale(1.02); }
+    100% { opacity: 1; border-color: var(--border-highlight); transform: scale(1); }
+}
+.blink-card {
+    animation: blinkEffect 0.6s ease-in-out 3;
+}
+
+/* Bintang Hitam di Pojok Kanan Atas */
+.black-star-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #334155; /* Bintang hitam/gelap */
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.black-star-btn.favorited {
+    color: var(--yellow-accent); /* Berubah kuning jika masuk favorite */
 }
 
 .stock-card-header {
@@ -187,96 +190,84 @@ header.main-header {
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 4px;
-    position: relative;
+    padding-right: 18px; /* Ruang untuk bintang */
 }
 .ticker { font-weight: 800; font-size: 14px; color: #fff; }
 .sector-name { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
 
-/* Bintang Hitam di Pojok Kanan Kartu */
-.black-star {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 14px;
-    color: #334155; /* Hitam/abu gelap elegan */
-    cursor: pointer;
-    transition: color 0.2s;
+/* Perbesar Selisih Persentase & Nilai Sinyal Power */
+.price-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 4px;
 }
-.black-star.favorited { color: var(--yellow-accent); }
-
 .price-text {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
 }
-
-/* Perbesar Angka Selisih Persentase dan Nilai Power Score */
 .pct { 
     font-family: 'JetBrains Mono', monospace; 
-    font-weight: 700; 
+    font-weight: 800; 
     font-size: 14px; /* Diperbesar */
 }
 .pct.up { color: var(--green-bullish); }
 .pct.down { color: var(--red-bearish); }
 
-.power-val { 
-    font-family: 'JetBrains Mono', monospace; 
-    font-size: 12px; /* Diperbesar */
-    color: var(--text-primary); 
-    font-weight: 700; 
-}
-
-/* Status Icon Bar (Rocket, Pasir, Wait) */
-.action-status-bar {
+/* Kolom Rocket / Pasir / Wait */
+.card-action-row {
     display: flex;
     align-items: center;
     gap: 4px;
     margin-top: 6px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
+}
+.action-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     padding: 2px 6px;
     border-radius: 4px;
-    width: fit-content;
+    font-size: 10px;
 }
-.action-status-bar.buy { color: var(--green-bullish); background: var(--green-bg); }
-.action-status-bar.entry { color: var(--yellow-accent); background: rgba(245, 158, 11, 0.12); }
-.action-status-bar.wait { color: var(--red-bearish); background: var(--red-bg); }
-
-/* Animasi Blink untuk Hasil Pencarian / Favorit */
-@keyframes blinkEffect {
-    0% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(1.02); background-color: var(--accent-blue); }
-    100% { opacity: 1; transform: scale(1); }
-}
-.blink-animation {
-    animation: blinkEffect 0.6s ease-in-out 3;
-}
+.action-badge.buy { background: var(--green-bg); color: var(--green-bullish); border: 1px solid rgba(16,185,129,0.3); }
+.action-badge.entry { background: rgba(245,158,11,0.15); color: var(--yellow-accent); border: 1px solid rgba(245,158,11,0.3); }
+.action-badge.wait { background: var(--red-bg); color: var(--red-bearish); border: 1px solid rgba(239,68,68,0.3); }
 
 /* Rotating Signal Badge */
 .rotator-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 6px;
+    padding: 2px 6px;
     border-radius: 4px;
     font-size: 10px;
     font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
     border: 1px solid transparent;
+    margin-top: 4px;
 }
 .rotator-badge.bullish { color: var(--green-bullish); background: var(--green-bg); border-color: rgba(16, 185, 129, 0.3); }
 .rotator-badge.bearish { color: var(--red-bearish); background: var(--red-bg); border-color: rgba(239, 68, 68, 0.3); }
 .rotator-badge.neutral { color: var(--text-muted); background: #090d14; border-color: var(--border-color); }
 .rotator-badge.gold { color: var(--yellow-accent); background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3); }
 
-/* Power Score Bar Component (Dipindah ke atas nama EMITEN) */
-.power-container { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+/* Power Score Bar di Atas Nama Emiten */
+.power-container-top { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
 .power-bars { display: flex; gap: 2px; }
 .bar-segment { width: 4px; height: 8px; background: #232d3f; border-radius: 1px; }
 .bar-segment.active-green { background: var(--green-bullish); }
 .bar-segment.active-red { background: var(--red-bearish); }
+.power-val { 
+    font-family: 'JetBrains Mono', monospace; 
+    font-size: 12px; /* Diperbesar */
+    color: var(--text-primary); 
+    font-weight: 800; 
+}
 
 /* Modal */
 .modal-overlay {
@@ -294,7 +285,7 @@ header.main-header {
     width: 90%; max-width: 380px;
 }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.close-btn { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+.close-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
 .modal-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1f293d; font-size: 11px; }
 .modal-row span:first-child { color: var(--text-muted); }
 .modal-row span:last-child { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
