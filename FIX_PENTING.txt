@@ -1,0 +1,9 @@
+V4.0.1 FIX CACHE
+
+Jika localhost masih menampilkan V3.9 atau 0 emiten:
+1. Tutup server lama.
+2. Hapus/clear site data untuk localhost:8000 di browser.
+3. Jalankan server lagi dari folder V4.0.1.
+4. Buka localhost:8000 lalu Ctrl+F5.
+
+Masalah sebelumnya berasal dari Service Worker cache lama yang memakai nama cache sama sehingga file HTML/JS lama bisa tampil bercampur dengan file baru.

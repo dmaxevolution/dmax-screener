@@ -1,87 +1,16 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IDX Swing Trading Screener</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-
-    <header class="main-header">
-        <div class="brand-container">
-            <div class="brand-title">IDX TERMINAL</div>
-            <div class="subtitle">Swing Trading Screener</div>
-        </div>
-
-        <div class="header-right">
-            <div class="ihsg-compact-badge">
-                <span class="label">IHSG</span>
-                <span id="ihsg-val" class="value">-</span>
-                <span id="ihsg-pct" class="pct">-</span>
-            </div>
-            
-            <div class="search-box">
-                <input type="text" id="search-input" placeholder="Cari emiten..." oninput="handleSearchInput()">
-                <button id="clear-search" class="clear-search-btn" onclick="clearSearch()">&times;</button>
-            </div>
-        </div>
-    </header>
-
-    <main class="dashboard-container">
-        <!-- Favorite Section (IndexedDB Backup) -->
-        <section id="favorite-section" class="hidden">
-            <div class="section-header">
-                <h3>Emiten Favorite (DB)</h3>
-                <span class="badge-live" style="background:rgba(245,158,11,0.15); color:var(--yellow-accent);">SAVED</span>
-            </div>
-            <div id="favorite-list" class="stocks-grid"></div>
-        </section>
-
-        <!-- Barisan Sinyal Setup Entry Swing (Dipindah ke bawah Favorite) -->
-        <section>
-            <div class="section-header">
-                <h3>Sinyal Setup Entry Swing</h3>
-                <span class="badge-live">LIVE RADAR</span>
-            </div>
-            <div id="entry-list" class="entry-grid"></div>
-        </section>
-
-        <!-- Top 10 High Power Watchlist -->
-        <section>
-            <div class="section-header">
-                <h3>Top 10 High Power Score</h3>
-            </div>
-            <div id="top10-grid" class="stocks-grid"></div>
-        </section>
-
-        <!-- All Stocks Grid -->
-        <section style="margin-bottom: 40px;">
-            <div class="section-header">
-                <h3>Semua Emiten Pilihan BEI (<span id="total-emiten-count">0</span>)</h3>
-            </div>
-            <div id="all-stocks-grid" class="stocks-grid"></div>
-        </section>
-    </main>
-
-    <!-- Modal Detail Emiten -->
-    <div id="stock-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div>
-                    <h2 id="modal-ticker"></h2>
-                    <span id="modal-sector" class="sector-badge"></span>
-                </div>
-                <button onclick="closeModal()" class="close-btn">&times;</button>
-            </div>
-            <div id="modal-details"></div>
-            <div style="margin-top: 14px; display: flex; gap: 8px;">
-                <button id="modal-fav-btn" onclick="toggleCurrentModalFavorite()" style="flex:1; padding:8px; border-radius:6px; background:var(--accent-blue); color:#fff; border:none; font-weight:700; cursor:pointer; font-size:11px;">Simpan ke DB</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="indicators.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07111f"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><link rel="stylesheet" href="styles.css"><title>IDX TERMINAL PRO V4.0.3</title></head><body>
+<div class="app-shell">
+<aside class="sidebar" id="sidebar"><div class="side-logo"><span class="logo-mark">◇</span><div><b>IDX TERMINAL <i>PRO</i></b><small>Smart Analysis • Better Decision</small></div></div><nav class="side-menu"><button class="side-item active" data-view="all">⌂<span>Dashboard</span></button><button class="side-item" data-view="signals">⚡<span>Screener</span></button><button class="side-item" data-view="favorites">☆<span>Watchlist</span></button><button class="side-item" data-view="emiten">▦<span>Emiten</span></button></nav><div class="side-bottom"><span class="live-dot"></span>Sistem Online<br><small>Data Real-time</small></div></aside>
+<div class="content-shell"><header class="topbar"><button class="menu-toggle" id="menuToggle">☰</button><div class="brand"><div class="brand-mark">◇</div><div><h1>IDX TERMINAL <b>PRO</b><span>V4.0.3</span></h1><small id="status">Memuat market engine...</small></div></div><div class="top-search"><span>⌕</span><input id="search" placeholder="Cari Ticker / Emiten / Sektor..."><kbd>CTRL + K</kbd><button id="clearSearch">×</button></div><div class="top-meta"><span class="top-clock"><b id="clock">--:--:-- WIB</b><small id="clockDate">Memuat tanggal</small></span><span class="meta-ready"><i></i> LIVE</span><button id="refresh" class="refresh-btn">↻ <span>Refresh</span></button></div></header>
+<section class="market-command"><div class="market-primary"><div class="eyebrow">MARKET OVERVIEW <span>● LIVE DATA</span></div><div class="ihsg-box"><div><span>IHSG</span><strong id="ihsg">-</strong><small id="ihsgChange">Memuat...</small></div><div class="sparkline"><svg viewBox="0 0 150 48" preserveAspectRatio="none"><polyline points="0,35 10,30 20,33 30,18 42,23 53,12 65,21 77,17 88,28 100,22 110,29 122,20 135,26 150,13"/></svg></div></div></div><div class="market-stat trend"><span>TREND MARKET</span><strong id="ihsgTrend">SIDEWAYS</strong><small>↔ Momentum Netral</small></div><div class="market-stat"><span>RSI</span><strong id="ihsgRsi">-</strong><small>● Neutral</small></div><div class="market-stat risk"><span>MARKET RISK</span><strong><b id="ihsgSignal">-</b> <em>/ 100</em></strong><small>● Low Risk</small></div><div class="market-stat"><span>EMITEN AKTIF</span><strong id="count">0</strong><small id="activeCount">0 / 0</small></div><div class="market-ready"><span>DATA STATUS</span><strong>✓ <b id="schema">CHECK</b></strong><small>Siap untuk Analisa & Entry</small><em id="updatedAt">-</em></div></section>
+<section class="exchange-strip" aria-label="Status Bursa Indonesia WIB">
+  <div class="exchange-live"><span id="exchangeDot" class="exchange-dot off"></span><div><span class="strip-label">STATUS BURSA WIB</span><strong id="exchangeState">Memuat status...</strong><small id="nextSession">Menghitung sesi bursa...</small></div></div>
+  <div class="session-timeline">
+    <div class="session-item" id="sessionOpen"><span class="session-dot"></span><div><b>SESI I</b><small id="sessionOpenTime">09:00–12:00</small></div></div>
+    <div class="session-item" id="sessionBreak"><span class="session-dot"></span><div><b>ISTIRAHAT</b><small id="sessionBreakTime">12:00–13:30</small></div></div>
+    <div class="session-item" id="sessionTwo"><span class="session-dot"></span><div><b>SESI II</b><small id="sessionTwoTime">13:30–15:50</small></div></div>
+  </div>
+  <div class="holiday-box"><span>◫ LIBUR / INFO BERIKUTNYA</span><strong id="holidayInfo">Memuat kalender...</strong></div>
+</section>
+<section class="workspace"><div class="main-work"><div class="filterbar"><div class="chips"><button data-view="all" class="chip active">⌂ Semua Emiten <b id="chipAll"></b></button><button data-view="signals" class="chip">🔥 Prioritas</button><button data-view="favorites" class="chip">☆ Favorit</button><button data-view="emiten" class="chip">▦ Master Emiten</button></div><select id="signal"><option value="">Semua Signal</option><option>ELITE BUY</option><option>STRONG BUY</option><option>BUY</option><option>WATCHLIST</option><option>WAIT</option><option>AVOID</option></select></div><main id="app"><div class="loading">Menyiapkan IDX Terminal PRO...</div></main></div><aside class="right-panel"><section class="panel-card"><div class="panel-title">▥ TOP SEKTOR <small>HARI INI</small></div><div id="sectorList" class="sector-list"></div></section><section class="panel-card market-mini-card"><div class="panel-title">▥ RINGKASAN PASAR</div><div class="mini-ihsg"><span>IHSG</span><b id="sideIhsg">-</b></div><div class="mini-line"></div><div class="mini-grid"><span>RSI <b id="sideRsi">-</b></span><span>Risk <b id="sideRisk">-</b></span><span>Active <b id="sideCount">0</b></span></div></section><section class="quote-card">“Disiplin bukan tentang menghindari risiko, tapi tentang mengelola risiko dengan strategi yang tepat.”<small>— IDX Terminal Pro</small></section></aside></section>
+<footer><span><i class="live-dot"></i> Sistem Online</span><span>Data Real-time • <b id="footerCount">0 Emiten Aktif</b></span><span>IDX TERMINAL PRO V4.0.3</span></footer></div></div><nav class="mobile-nav"><button data-view="all" class="active">⌂<span>Home</span></button><button data-view="signals">⚡<span>Screen</span></button><button data-view="favorites">☆<span>Watchlist</span></button><button data-view="emiten">▦<span>Menu</span></button></nav><dialog id="analysisModal"><article><button id="closeModal" class="close-modal">×</button><div id="analysisContent"></div></article></dialog><script src="app.js"></script></body></html>

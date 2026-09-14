@@ -1,298 +1,71 @@
-/**
- * app.js - Controller, UI Rotator, IndexedDB & Dynamic Renderer
- */
-
-let stocksData = [];
-let favoriteTickers = new Set();
-let currentPhase = 0;
-let currentModalStock = null;
-
-// IndexedDB Setup untuk Backup Permanen
-const DB_NAME = "IDX_Screener_DB";
-const STORE_NAME = "favorites";
-let db = null;
-
-function initIndexedDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            db = request.result;
-            loadFavoritesFromDB().then(resolve);
-        };
-        request.onupgradeneeded = (event) => {
-            const database = event.target.result;
-            if (!database.objectStoreNames.contains(STORE_NAME)) {
-                database.createObjectStore(STORE_NAME, { keyPath: "ticker" });
-            }
-        };
-    });
+const $=s=>document.querySelector(s);let raw={},stocks=[],emitens=[],view='all';
+let fav=new Set(JSON.parse(localStorage.getItem('idxpro_fav')||'[]'));
+const n=v=>{const x=Number(v);return Number.isFinite(x)?x:0};
+const fmt=v=>Math.round(n(v)).toLocaleString('id-ID');
+const fmtIhsg=v=>n(v).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+function signalFromScore(x){return x>=90?'ELITE BUY':x>=80?'STRONG BUY':x>=70?'BUY':x>=60?'WATCHLIST':x>=50?'WAIT':'AVOID'}
+function entrySignal(s){
+ const score=Math.max(0,Math.min(100,n(s.entry_probability??s.signal_strength??s.professional_score)));
+ const rsi=n(s.rsi??s.timeframes?.daily?.rsi), bull=n(s.ema20)>n(s.ema50), above=n(s.close)>n(s.ema20), macd=n(s.macd)>n(s.macd_signal);
+ if(!s.stale&&score>=85&&bull&&above&&macd&&rsi>=50&&rsi<=75)return{pct:score,cls:'entry-now',label:'🔥 ENTRY NOW'};
+ if(!s.stale&&score>=75&&bull&&above)return{pct:score,cls:'ready',label:'🟢 READY'};
+ if(!s.stale&&score>=65)return{pct:score,cls:'setup',label:'🔵 READY SETUP'};
+ if(score>=55)return{pct:score,cls:'watch',label:'🟡 PANTAU'};
+ if(score>=45)return{pct:score,cls:'wait',label:'⚪ WAIT'};
+ return{pct:score,cls:'avoid',label:'🔴 AVOID'}
 }
-
-function saveFavoriteToDB(stock) {
-    if (!db) return;
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.put(stock);
-    favoriteTickers.add(stock.ticker);
-    refreshUIFavorites();
+function fallbackCandle(s){const o=n(s.open),h=n(s.high),l=n(s.low),c=n(s.close),rng=Math.max(h-l,0.000001),body=Math.abs(c-o),upper=h-Math.max(o,c),lower=Math.min(o,c)-l;if(!o&&!h&&!l)return{name:'MENUNGGU UPDATE',bias:'NEUTRAL',impact:'LOW',note:'Pola lengkap akan tersedia setelah update engine'};if(body/rng<=.10)return{name:'DOJI',bias:'NEUTRAL',impact:'MEDIUM',note:'Pasar ragu; tunggu konfirmasi'};if(lower>=Math.max(body,rng*.02)*2&&upper<=Math.max(body,rng*.02)*.9)return{name:'HAMMER',bias:'BULLISH',impact:'MEDIUM',note:'Penolakan harga bawah'};if(upper>=Math.max(body,rng*.02)*2&&lower<=Math.max(body,rng*.02)*.9)return{name:'SHOOTING STAR',bias:'BEARISH',impact:'MEDIUM',note:'Penolakan harga atas'};return{name:'NO MAJOR PATTERN',bias:'NEUTRAL',impact:'LOW',note:'Tidak ada pola besar pada candle terakhir'}}
+function normalize(s){const score=n(s.professional_score??n(s.power_score)*10),close=n(s.close),sl=n(s.stop_loss||close*.95);return{...s,candle_pattern:s.candle_pattern||fallbackCandle(s),professional_score:score,entry_probability:n(s.entry_probability??s.signal_strength??score),signal:s.signal||signalFromScore(score),strategy:s.strategy||(n(s.ema20)>n(s.ema50)?'TREND FOLLOWING':'WAIT'),mtf_alignment:s.mtf_alignment??(n(s.ema20)>n(s.ema50)?'DAILY BULLISH':'DAILY MIXED'),risk_plan:s.risk_plan||{entry:close,stop_loss:sl,tp1:n(s.take_profit_1||close*1.08),tp2:n(s.take_profit_2||close*1.15)},plan_monitor:s.plan_monitor||{basis:'LAST DAILY CANDLE',cl:{touched:n(s.low)<=sl&&n(s.low)>0,close_below:close<=sl,level:sl},tp1:{touched:n(s.high)>=n(s.take_profit_1||close*1.08),close_above:false,level:n(s.take_profit_1||close*1.08)},tp2:{touched:n(s.high)>=n(s.take_profit_2||close*1.15),close_above:false,level:n(s.take_profit_2||close*1.15)}},timeframes:s.timeframes||{daily:{trend:n(s.ema20)>n(s.ema50)?'BULLISH':'MIXED',rsi:s.rsi??null}}}}
+function getStocks(d){return(d.all_stocks||d.stocks||d.top_10_entry||[]).map(normalize)}
+function clearSearch(){ $('#search').value='';render();$('#search').focus() }
+function analysis(s){const rsi=n(s.rsi??s.timeframes?.daily?.rsi),bull=n(s.ema20)>n(s.ema50),above=n(s.close)>n(s.ema20),score=s.professional_score;let items=[];items.push([bull?'🟢':'🔴','Trend EMA',bull?'EMA20 di atas EMA50: bullish':'EMA20 di bawah EMA50: lemah']);items.push([above?'🟢':'🔴','Posisi Harga',above?'Harga di atas EMA20':'Harga di bawah EMA20']);items.push([rsi>=50&&rsi<=70?'🟢':rsi>75||rsi<35?'🔴':'⚪','RSI '+(rsi||'-'),rsi>=50&&rsi<=70?'Momentum sehat':rsi>75?'Overbought / perlu hati-hati':rsi<35?'Oversold / volatil':'Momentum netral']);items.push([score>=75?'🟢':score>=50?'⚪':'🔴','Signal '+score+'%',s.signal+' • '+entrySignal(s).label]);const p=s.risk_plan||{};const cp=s.candle_pattern||{}; return `<h2>${s.ticker} — Analisa Ringkas</h2><p class="modal-sub">${s.sector||'Unknown'} • ${s.strategy}</p><div class="candle-modal"><b>🕯 Candle Monitor: ${cp.name||'—'}</b><span>${cp.bias||'NEUTRAL'} • ${cp.impact||'LOW'} IMPACT — ${cp.note||'Belum ada catatan pola'}</span><small>Monitor independen: tidak menaikkan atau menurunkan Algo Score.</small></div><div class="analysis-grid">${items.map(x=>`<div class="analysis-item"><b>${x[0]} ${x[1]}</b><span>${x[2]}</span></div>`).join('')}</div><div class="levels"><b>🎯 Trading Plan</b><span>Entry: Rp ${fmt(p.entry)}</span><span>Stop Loss: Rp ${fmt(p.stop_loss)}</span><span>TP1: Rp ${fmt(p.tp1)} • TP2: Rp ${fmt(p.tp2)}</span></div><p class="disclaimer">Rangkuman berbasis indikator yang tersedia pada data. Tetap gunakan manajemen risiko dan konfirmasi kondisi pasar.</p>`}
+function openAnalysis(s){$('#analysisContent').innerHTML=analysis(s);$('#analysisModal').showModal()}
+function tierInfo(s){
+ const es=entrySignal(s), score=es.pct;
+ if(es.cls==='entry-now'||score>=90)return{key:'elite',title:'🔥 PRIORITAS UTAMA — ENTRY PALING LAYAK',ready:'ENTRY NOW',score};
+ if(score>=80)return{key:'strong',title:'🟢 SANGAT LAYAK — PRIORITAS ENTRY',ready:'READY',score};
+ if(score>=70)return{key:'buy',title:'🔵 LAYAK — MENUNGGU KONFIRMASI RINGAN',ready:'READY',score};
+ if(score>=60)return{key:'watch',title:'🟡 WATCHLIST — BELUM IDEAL UNTUK ENTRY',ready:'PANTAU',score};
+ if(score>=50)return{key:'wait',title:'⚪ WAIT — TUNGGU SETUP LEBIH KUAT',ready:'WAIT',score};
+ return{key:'avoid',title:'🔴 TERLEMAH — HINDARI ENTRY',ready:'AVOID',score};
 }
-
-function removeFavoriteFromDB(ticker) {
-    if (!db) return;
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.delete(ticker);
-    favoriteTickers.delete(ticker);
-    refreshUIFavorites();
+function planChip(label,obj,type){const hit=!!obj?.touched;const closeHit=!!obj?.close_below||!!obj?.close_above;const cls=hit?(type==='cl'?'hit-loss':'hit-win'):'pending';const icon=hit?(type==='cl'?'✕':'✓'):'○';const title=hit?(closeHit?'Level dilewati/tutup melewati level':'Level tersentuh pada candle harian terakhir'):'Belum tersentuh pada candle harian terakhir';return `<span class="plan-chip ${cls}" title="${title}"><i>${icon}</i>${label}</span>`}
+function planMonitorCell(s){const m=s.plan_monitor||{},p=s.risk_plan||{};return `<div class="plan-monitor"><span class="plan-title">PLAN HIT</span><div class="plan-chips">${planChip('CL',m.cl||{level:p.stop_loss},'cl')}${planChip('TP1',m.tp1||{level:p.tp1},'tp')}${planChip('TP2',m.tp2||{level:p.tp2},'tp')}</div><small>Daily candle</small></div>`}
+function renderCards(){
+ const q=($('#search').value||'').toLowerCase(),sig=$('#signal').value;
+ let list=stocks.filter(s=>`${s.ticker||''} ${s.sector||''}`.toLowerCase().includes(q)&&(!sig||s.signal===sig));
+ if(view==='signals')list=list.filter(s=>['ELITE BUY','STRONG BUY','BUY'].includes(s.signal));
+ if(view==='favorites')list=list.filter(s=>fav.has(s.ticker));
+ list=list.map(s=>({...s,_tier:tierInfo(s)})).sort((a,b)=>b._tier.score-a._tier.score);
+ const app=$('#app');app.innerHTML=''; if(!list.length){app.innerHTML='<div class="empty">Tidak ada emiten yang cocok.</div>';return}
+ const order=['elite','strong','buy','watch','wait','avoid'];
+ const labels={elite:'🔥 PRIORITAS UTAMA — ENTRY PALING LAYAK',strong:'🟢 SANGAT LAYAK — PRIORITAS ENTRY',buy:'🔵 LAYAK — SIAP SESUAI ALGORITMA',watch:'🟡 WATCHLIST — BELUM IDEAL UNTUK ENTRY',wait:'⚪ WAIT — TUNGGU SETUP LEBIH KUAT',avoid:'🔴 TERLEMAH — HINDARI ENTRY'};
+ const groups=order.map(key=>({key,items:list.filter(s=>s._tier.key===key)})).filter(g=>g.items.length);
+ app.innerHTML='<section class="market-list">'+groups.map(g=>`<div class="rank-tier tier-${g.key}"><div class="rank-tier-title"><span>${labels[g.key]}</span><b>${g.items.length} EMITEN</b></div>${g.items.map(s=>{
+  const p=s.risk_plan||{},rank=list.indexOf(s)+1,es=entrySignal(s),tier=s._tier,entry=n(p.entry||s.close),diff=entry?((n(s.close)-entry)/entry*100):0,chg=n(s.change_pct),fill=Math.max(3,Math.min(100,tier.score));
+  return `<article class="stock-row" data-ticker="${s.ticker}">
+   <div class="stock-rank"><small>RANK</small><b>#${rank}</b></div>
+   <div class="stock-main"><div class="ticker-line"><b>${s.ticker||'-'}</b>${s.stale?'<i>STALE</i>':''}</div><span>${s.sector||'Unknown'}</span></div>
+   <div class="stock-price"><span>HARGA TERKINI</span><b>Rp ${fmt(s.close)}</b><small class="${chg>=0?'up':'down'}">${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)}%</small></div>
+   <div class="stock-entry"><span>ENTRY IDEAL</span><b>Rp ${fmt(entry)}</b><small class="${diff<=0?'entry-good':'entry-hot'}">${diff>=0?'+':''}${diff.toFixed(2)}% dari entry</small></div>
+   <div class="signal-cell"><div class="signal-head"><span>SIGNAL</span><b>${tier.score}%</b></div><div class="signal-track"><div class="signal-fill ${es.cls}" style="width:${fill}%"></div></div><small>${s.signal||'-'}</small></div>
+   <div class="candle-cell ${String(s.candle_pattern?.bias||'NEUTRAL').toLowerCase()}"><div class="candle-glyph"><i></i><i></i><i></i></div><div><span>PLAN CANDLE</span><b>${s.candle_pattern?.name||'—'}</b><small>${s.candle_pattern?.impact||'LOW'} IMPACT • ${s.candle_pattern?.bias||'NEUTRAL'}</small></div></div>
+   ${planMonitorCell(s)}
+   <div class="stock-ready ${es.cls}"><span>${tier.ready}</span><strong>${es.label.replace(/^.*? /,'')}</strong></div>
+  </article>`}).join('')}</div>`).join('')+'</section>';
+ document.querySelectorAll('.stock-row').forEach(row=>row.onclick=()=>{const s=stocks.find(x=>x.ticker===row.dataset.ticker);if(s)openAnalysis(s)});
 }
-
-function loadFavoritesFromDB() {
-    return new Promise((resolve) => {
-        if (!db) return resolve([]);
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = () => {
-            const items = request.result || [];
-            items.forEach(item => favoriteTickers.add(item.ticker));
-            refreshUIFavorites();
-            resolve(items);
-        };
-    });
-}
-
-document.addEventListener("DOMContentLoaded", async () => {
-    await initIndexedDB();
-    fetchData();
-    startUIRotator();
-});
-
-async function fetchData() {
-    try {
-        const res = await fetch('data.json');
-        const data = await res.json();
-        
-        renderIHSGHeader(data.ihsg);
-        stocksData = data.all_stocks || [];
-        
-        const totalEl = document.getElementById('total-emiten-count');
-        if (totalEl) totalEl.textContent = `${data.total_emiten || stocksData.length} Emiten`;
-
-        renderEntrySection(stocksData);
-        renderTop10Compact(data.top_10_entry || stocksData.slice(0, 10));
-        renderAllStocksGrid(stocksData);
-    } catch (err) {
-        console.error("Gagal memuat data JSON:", err);
-    }
-}
-
-function renderIHSGHeader(ihsg) {
-    if (!ihsg) return;
-    const valEl = document.getElementById('ihsg-val');
-    const pctEl = document.getElementById('ihsg-pct');
-    
-    valEl.textContent = ihsg.close.toLocaleString('id-ID');
-    const isUp = ihsg.change_pct >= 0;
-    pctEl.textContent = `${isUp ? '+' : ''}${ihsg.change_pct}%`;
-    pctEl.className = `pct ${isUp ? 'up' : 'down'}`;
-}
-
-function renderEntrySection(stocks) {
-    const container = document.getElementById('entry-list');
-    if (!container) return;
-    container.innerHTML = '';
-
-    const entryStocks = stocks.filter(s => {
-        const strat = evaluateEntryStrategy(s);
-        return strat.entryStatus === "BUY_ENTRY" || strat.patternName !== "-";
-    });
-
-    entryStocks.slice(0, 6).forEach(stock => {
-        container.appendChild(createStockCard(stock, true));
-    });
-}
-
-function renderTop10Compact(top10List) {
-    const grid = document.getElementById('top10-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    top10List.forEach(stock => grid.appendChild(createStockCard(stock)));
-}
-
-function renderAllStocksGrid(stocks) {
-    const grid = document.getElementById('all-stocks-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    stocks.forEach(stock => grid.appendChild(createStockCard(stock)));
-}
-
-function createStockCard(stock) {
-    const card = document.createElement('div');
-    card.className = 'stock-card-compact';
-    card.id = `card-${stock.ticker}`;
-    
-    const isUp = stock.change_pct >= 0;
-    const powerBarHTML = renderSignalPowerBar(stock.power_score || 5);
-    const analysis = evaluateEntryStrategy(stock);
-    const badgeHTML = getRotatorBadgeHTML(stock.ticker, analysis);
-    const actionHTML = renderActionColumn(stock, analysis);
-    const isFav = favoriteTickers.has(stock.ticker);
-    
-    card.innerHTML = `
-        <button class="black-star-btn ${isFav ? 'favorited' : ''}" onclick="event.stopPropagation(); toggleFavorite('${stock.ticker}')">★</button>
-        ${powerBarHTML}
-        <div class="stock-card-header">
-            <div>
-                <div class="ticker">${stock.ticker}</div>
-                <div class="sector-name">${stock.sector}</div>
-            </div>
-        </div>
-        <div class="price-container">
-            <div class="price-text">Rp ${stock.close.toLocaleString('id-ID')}</div>
-            <span class="pct ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${stock.change_pct}%</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-            <div id="badge-rotator-${stock.ticker}">${badgeHTML}</div>
-            <div>${actionHTML}</div>
-        </div>
-    `;
-    card.onclick = () => openModal(stock);
-    return card;
-}
-
-function toggleFavorite(ticker) {
-    const stock = stocksData.find(s => s.ticker === ticker);
-    if (!stock) return;
-    if (favoriteTickers.has(ticker)) {
-        removeFavoriteFromDB(ticker);
-    } else {
-        saveFavoriteToDB(stock);
-    }
-    // Update ikon bintang pada semua kartu yang bersangkutan
-    document.querySelectorAll(`.black-star-btn`).forEach(btn => {
-        if (btn.closest(`#card-${ticker}`)) {
-            btn.classList.toggle('favorited', favoriteTickers.has(ticker));
-        }
-    });
-}
-
-function refreshUIFavorites() {
-    const favSection = document.getElementById('favorite-section');
-    const favList = document.getElementById('favorite-list');
-    if (!favSection || !favList) return;
-
-    if (favoriteTickers.size === 0) {
-        favSection.classList.add('hidden');
-        return;
-    }
-
-    favSection.classList.remove('hidden');
-    favList.innerHTML = '';
-    
-    stocksData.filter(s => favoriteTickers.has(s.ticker)).forEach(stock => {
-        favList.appendChild(createStockCard(stock));
-    });
-}
-
-function getRotatorBadgeHTML(ticker, analysis) {
-    let label = analysis.patternName;
-    let iconKey = analysis.iconKey;
-    let styleClass = analysis.patternType === "BULLISH" ? "bullish" : (analysis.patternType === "BEARISH" ? "bearish" : "neutral");
-
-    if (analysis.isGoldenCross && (currentPhase === 1 || label === "-")) {
-        label = "G-CROSS";
-        iconKey = "G_CROSS";
-        styleClass = "gold";
-    }
-
-    const iconSVG = getCandleIconSVG(iconKey);
-    return `<span class="rotator-badge ${styleClass}">${iconSVG} ${label}</span>`;
-}
-
-function startUIRotator() {
-    setInterval(() => {
-        currentPhase = currentPhase === 0 ? 1 : 0;
-        stocksData.forEach(stock => {
-            const el = document.getElementById(`badge-rotator-${stock.ticker}`);
-            if (el) {
-                const analysis = evaluateEntryStrategy(stock);
-                el.innerHTML = getRotatorBadgeHTML(stock.ticker, analysis);
-            }
-        });
-    }, 3000);
-}
-
-// Live Search dengan Blink 3x & Tombol X Clear
-function handleSearchInput() {
-    const input = document.getElementById('search-input');
-    const clearBtn = document.getElementById('clear-search');
-    const query = input.value.trim().toUpperCase();
-
-    if (query.length > 0) {
-        clearBtn.classList.add('active');
-    } else {
-        clearBtn.classList.remove('active');
-    }
-
-    const filtered = stocksData.filter(s => s.ticker.includes(query) || s.sector.toUpperCase().includes(query));
-    renderAllStocksGrid(filtered);
-
-    // Efek Blink 3x pada hasil pencarian pertama jika pas
-    if (query.length > 1 && filtered.length > 0) {
-        const firstMatchCard = document.getElementById(`card-${filtered[0].ticker}`);
-        if (firstMatchCard) {
-            firstMatchCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            firstMatchCard.classList.remove('blink-card');
-            void firstMatchCard.offsetWidth; // Trigger reflow
-            firstMatchCard.classList.add('blink-card');
-        }
-    }
-}
-
-function clearSearch() {
-    const input = document.getElementById('search-input');
-    input.value = '';
-    document.getElementById('clear-search').classList.remove('active');
-    renderAllStocksGrid(stocksData);
-    input.focus();
-}
-
-// Modal Details
-function openModal(stock) {
-    currentModalStock = stock;
-    document.getElementById('modal-ticker').textContent = stock.ticker;
-    document.getElementById('modal-sector').textContent = stock.sector;
-    const details = document.getElementById('modal-details');
-
-    details.innerHTML = `
-        <div class="modal-row"><span>Penutupan Murni</span><span style="color:#fff;">Rp ${stock.close.toLocaleString('id-ID')}</span></div>
-        <div class="modal-row"><span>Open / High / Low</span><span>${stock.open} / ${stock.high} / ${stock.low}</span></div>
-        <div class="modal-row"><span>RSI (14)</span><span>${stock.rsi}</span></div>
-        <div class="modal-row"><span>EMA 20 / EMA 50</span><span>${stock.ema20} / ${stock.ema50}</span></div>
-        <div class="modal-row"><span>Stop Loss (SL)</span><span style="color:var(--red-bearish);">Rp ${stock.stop_loss.toLocaleString('id-ID')}</span></div>
-        <div class="modal-row"><span>Target Profit 1 (TP1)</span><span style="color:var(--green-bullish);">Rp ${stock.take_profit_1.toLocaleString('id-ID')}</span></div>
-        <div class="modal-row"><span>Target Profit 2 (TP2)</span><span style="color:var(--green-bullish);">Rp ${stock.take_profit_2.toLocaleString('id-ID')}</span></div>
-    `;
-
-    const favBtn = document.getElementById('modal-fav-btn');
-    if (favoriteTickers.has(stock.ticker)) {
-        favBtn.textContent = "Hapus dari Favorite DB";
-        favBtn.style.background = "var(--red-bearish)";
-    } else {
-        favBtn.textContent = "Simpan ke Favorite DB";
-        favBtn.style.background = "var(--accent-blue)";
-    }
-
-    document.getElementById('stock-modal').classList.remove('hidden');
-}
-
-function closeModal() {
-    document.getElementById('stock-modal').classList.add('hidden');
-}
-
-function toggleCurrentModalFavorite() {
-    if (!currentModalStock) return;
-    toggleFavorite(currentModalStock.ticker);
-    openModal(currentModalStock); // Refresh modal button state
-}
+function saveLocal(list){localStorage.setItem('idxpro_emiten',JSON.stringify(list))}
+function renderEmitens(){const app=$('#app');const local=JSON.parse(localStorage.getItem('idxpro_emiten')||'null');const list=local||emitens;const q=($('#search').value||'').toLowerCase();const filtered=list.filter(x=>`${x.ticker||''} ${x.sector||''}`.toLowerCase().includes(q));app.innerHTML=`<section class="emiten-panel"><div class="emiten-head"><div><h2>📋 Master Emiten</h2><small>${filtered.length}/${list.length} emiten • ${local?'Local Manager':'emiten.json'}</small></div><div class="emiten-actions"><button id="addEmiten">➕ Tambah</button><button id="exportEmitens">⬇ Export</button><button id="resetEmitens">↺ Reset</button></div></div><div class="add-form" id="addForm" hidden><input id="newTicker" placeholder="Ticker, contoh GOTO"><input id="newSector" placeholder="Sector, contoh Technology"><button id="saveNew">Simpan</button><button id="cancelNew">Batal</button></div><div class="emiten-list">${filtered.map((x,i)=>`<div class="emiten-row"><b>${x.ticker}</b><span>${x.sector||'Unknown'}</span><i class="${x.active!==false?'on':'off'}">${x.active!==false?'ACTIVE':'OFF'}</i><button class="editE" data-i="${i}">✏️</button><button class="delE" data-i="${i}">🗑️</button></div>`).join('')||'<div class="empty">Tidak ada emiten.</div>'}</div><p class="manager-note">Perubahan disimpan lokal/offline. Klik Export untuk menghasilkan emiten.json yang dapat diunggah ke GitHub agar GitHub Actions ikut menganalisa ticker baru.</p></section>`;
+$('#addEmiten').onclick=()=>$('#addForm').hidden=false;$('#cancelNew').onclick=()=>$('#addForm').hidden=true;$('#saveNew').onclick=()=>{const t=$('#newTicker').value.trim().toUpperCase().replace('.JK',''),sec=$('#newSector').value.trim()||'Unknown';if(!/^[A-Z0-9]{2,10}$/.test(t))return alert('Ticker tidak valid');if(list.some(x=>x.ticker===t))return alert('Ticker sudah ada');list.push({ticker:t,sector:sec,active:true});saveLocal(list);renderEmitens()};document.querySelectorAll('.delE').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(confirm('Hapus '+filtered[i].ticker+' dari daftar lokal?')){const t=filtered[i].ticker;saveLocal(list.filter(x=>x.ticker!==t));renderEmitens()}});document.querySelectorAll('.editE').forEach(b=>b.onclick=()=>{const x=filtered[+b.dataset.i],sec=prompt('Sector untuk '+x.ticker,x.sector||'Unknown');if(sec!==null){list.find(z=>z.ticker===x.ticker).sector=sec;saveLocal(list);renderEmitens()}});$('#resetEmitens').onclick=()=>{localStorage.removeItem('idxpro_emiten');renderEmitens()};$('#exportEmitens').onclick=()=>{const blob=new Blob([JSON.stringify({version:1,description:'Master database emiten IDX',emiten:list},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='emiten.json';a.click();URL.revokeObjectURL(a.href)}}
+function syncNav(){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view))}
+function render(){syncNav();if(view==='emiten')renderEmitens();else renderCards()}
+async function load(){try{const r=await fetch('data.json?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(r.status);raw=await r.json();localStorage.setItem('idxpro_data',JSON.stringify(raw))}catch(e){raw=JSON.parse(localStorage.getItem('idxpro_data')||'{}')}try{const r=await fetch('emiten.json?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(r.status);const e=await r.json();emitens=e.emiten||e.emitens||[]}catch(e){emitens=[]}stocks=getStocks(raw);$('#count').textContent=raw.total_emiten||stocks.length;const ca=$('#chipAll');if(ca)ca.textContent='('+stocks.length+')';$('#activeCount').textContent=(emitens.filter(x=>x.active!==false).length||stocks.length)+' Active';const ih=raw.ihsg||{};$('#ihsg').textContent=ih.close?fmtIhsg(ih.close):'-';const ch=Number(ih.change_pct);$('#ihsgChange').textContent=Number.isFinite(ch)?`${ch>=0?'▲':'▼'} ${Math.abs(ch).toFixed(2)}%`: (ih.status==='unavailable'?'IHSG belum tersedia':'Memuat IHSG');$('#ihsgChange').className=Number.isFinite(ch)?(ch>=0?'up':'down'):'';$('#ihsgTrend').textContent=(ih.trend||'SIDEWAYS');$('#ihsgRsi').textContent=(Number.isFinite(Number(ih.rsi))?Number(ih.rsi).toFixed(1):'-');$('#ihsgSignal').textContent=Number.isFinite(Number(ih.market_risk))?Number(ih.market_risk): (Number.isFinite(Number(ih.risk))?Number(ih.risk): (Number(ih.signal_score)||27));$('#schema').textContent=stocks.length?'READY':'EMPTY';$('#updatedAt').textContent=raw.generated_at||raw.last_updated||'-';$('#status').textContent=stocks.length?'✓ '+stocks.length+' emiten siap':'⚠ Data tidak tersedia';const si=$('#sideIhsg'),sr=$('#sideRsi'),sk=$('#sideRisk'),sc=$('#sideCount'),fc=$('#footerCount');if(si)si.textContent=ih.close?fmtIhsg(ih.close):'-';if(sr)sr.textContent=$('#ihsgRsi').textContent;if(sk)sk.textContent=$('#ihsgSignal').textContent;if(sc)sc.textContent=stocks.length;if(fc)fc.textContent=stocks.length+' Emiten Aktif';const sectors={};stocks.forEach(x=>{const k=x.sector||'Lainnya';sectors[k]=(sectors[k]||0)+n(x.change_pct)});const sec=$('#sectorList');if(sec){sec.innerHTML=Object.entries(sectors).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`<div><span>◈ ${k}</span><b>${v>=0?'+':''}${v.toFixed(2)}%</b></div>`).join('')||sec.innerHTML}render()}
+$('#search').oninput=render;$('#clearSearch').onclick=clearSearch;$('#signal').onchange=render;document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;render()});$('#menuToggle').onclick=()=>{document.getElementById('sidebar').classList.toggle('mobile-open')};$('#refresh').onclick=load;$('#closeModal').onclick=()=>$('#analysisModal').close();$('#analysisModal').addEventListener('click',e=>{if(e.target===$('#analysisModal'))e.target.close()});window.addEventListener('online',load);if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.map(r=>r.unregister()))).catch(()=>{});}const IDX_HOLIDAYS_2026={
+ '2026-01-01':'Tahun Baru','2026-01-16':'Isra Mikraj','2026-02-16':'Cuti Bersama Imlek','2026-02-17':'Tahun Baru Imlek','2026-03-18':'Cuti Bersama Nyepi','2026-03-19':'Nyepi','2026-03-20':'Cuti Bersama Idul Fitri','2026-03-23':'Cuti Bersama Idul Fitri','2026-03-24':'Cuti Bersama Idul Fitri','2026-04-03':'Wafat Yesus Kristus','2026-05-01':'Hari Buruh','2026-05-14':'Kenaikan Yesus Kristus','2026-05-15':'Cuti Bersama Kenaikan','2026-05-27':'Idul Adha','2026-05-28':'Cuti Bersama Idul Adha','2026-06-01':'Hari Lahir Pancasila','2026-06-16':'Tahun Baru Islam','2026-08-17':'Kemerdekaan RI','2026-08-25':'Maulid Nabi','2026-12-24':'Cuti Bersama Natal','2026-12-25':'Natal','2026-12-31':'Libur Bursa'};
+function jakartaNow(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit',weekday:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).reduce((o,x)=>(o[x.type]=x.value,o),{});return parts}
+function mins(hm){const [h,m]=hm.split(':').map(Number);return h*60+m}
+function setText(id,value){const el=$(id);if(el)el.textContent=value}
+function setClass(id,value){const el=$(id);if(el)el.className=value}
+function exchangeClock(){const p=jakartaNow(), date=`${p.year}-${p.month}-${p.day}`, now=Number(p.hour)*60+Number(p.minute), friday=p.weekday==='Fri', weekend=['Sat','Sun'].includes(p.weekday), holiday=IDX_HOLIDAYS_2026[date];const s1=['09:00',friday?'11:30':'12:00'], br=[s1[1],friday?'14:00':'13:30'], s2=[friday?'14:00':'13:30','15:50'];let state='BURSA TUTUP',active='';if(!weekend&&!holiday){if(now>=mins(s1[0])&&now<mins(s1[1])){state='SESI I BERLANGSUNG';active='sessionOpen'}else if(now>=mins(br[0])&&now<mins(br[1])){state='ISTIRAHAT BURSA';active='sessionBreak'}else if(now>=mins(s2[0])&&now<mins(s2[1])){state='SESI II BERLANGSUNG';active='sessionTwo'}else if(now>=mins('08:45')&&now<mins('09:00'))state='PRA-PEMBUKAAN';else if(now>=mins('15:50')&&now<mins('16:16'))state='PRA/PASCA PENUTUPAN'}setText('#clock',`${p.hour}:${p.minute}:${p.second} WIB`);setText('#clockDate',`${p.weekday}, ${p.day}/${p.month}/${p.year}`);setText('#sessionOpenTime',s1.join('–'));setText('#sessionBreakTime',br.join('–'));setText('#sessionTwoTime',s2.join('–'));document.querySelectorAll('.session-item').forEach(x=>x.classList.toggle('running',x.id===active));setText('#exchangeState',holiday?`LIBUR • ${holiday}`:state);setClass('#exchangeDot','exchange-dot '+(active?'on':'off'));const future=Object.keys(IDX_HOLIDAYS_2026).filter(x=>x>date).sort()[0];setText('#holidayInfo',holiday?holiday:(future?`${future.slice(8)}-${future.slice(5,7)} • ${IDX_HOLIDAYS_2026[future]}`:'Tidak ada data'));setText('#nextSession',active?`● ${state}`:(weekend?'Weekend — Bursa tutup':holiday?`Libur — ${holiday}`:`Berikutnya: ${s1[0]} WIB`))}
+function tick(){exchangeClock()}tick();setInterval(tick,1000);load();
