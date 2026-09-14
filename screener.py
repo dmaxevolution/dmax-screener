@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-DB_FILE='emiten.json'; OUT_FILE='data.json'; MIN_SUCCESS_RATIO=.70
+DB_FILE='emiten.json'; OUT_FILE='data.json'; LOG_FILE='plan_log.json'; MIN_SUCCESS_RATIO=.70
 
 def clean(x):
  if isinstance(x,dict): return {str(k):clean(v) for k,v in x.items()}
@@ -83,6 +83,15 @@ def candle_pattern(df):
         return {'name':'DOJI','bias':'NEUTRAL','impact':'MEDIUM','note':'Pasar ragu; tunggu breakout atau candle konfirmasi'}
     return {'name':'NO MAJOR PATTERN','bias':'NEUTRAL','impact':'LOW','note':'Tidak ada pola reversal besar pada candle terbaru'}
 
+def entry_class(a, stale=False):
+    score=a['score']; rsi=a['rsi']; bull=a['ema20']>a['ema50']; above=a['close']>a['ema20']; macd_bull=a['macd']>a['macd_signal']
+    if not stale and score>=85 and bull and above and macd_bull and 50<=rsi<=75: return ('ENTRY NOW','ENTRY NOW')
+    if not stale and score>=75 and bull and above: return ('READY','READY')
+    if not stale and score>=65: return ('READY SETUP','READY SETUP')
+    if score>=55: return ('PANTAU','PANTAU')
+    if score>=45: return ('WAIT','WAIT')
+    return ('AVOID','AVOID')
+
 def plan_monitor(a, entry, sl, tp1, tp2):
     """Level monitor independent of score. Uses latest DAILY candle only."""
     low=float(a.get('low',0)); high=float(a.get('high',0)); close=float(a.get('close',0))
@@ -101,7 +110,58 @@ def stock(row):
  # SAFE: intraday only last 60 days; failure does not fail daily analysis
  h=dl(t+'.JK','60d','1h'); hdata=analyze(h) if h is not None and len(h)>=30 else {'status':'unavailable'}
  score=a['score']; close=a['close']; support=a['support']; resistance=a['resistance']; entry=min(close, max(a['ema20'], support)); sl=min(entry*.98, support*.995); sl=max(sl, entry*.90); risk=max(entry-sl, entry*.01); tp1=entry+risk*2; tp2=entry+risk*3
- return {'ticker':t,'sector':row.get('sector','IDX'),'close':close,'change_pct':a['change_pct'],'professional_score':score,'entry_probability':score,'signal_strength':score,'signal':sig(score),'strategy':'TREND FOLLOWING' if a['trend']=='BULLISH' else 'WAIT / NO TRADE','mtf_alignment':a['trend'],'ema20':a['ema20'],'ema50':a['ema50'],'ema200':a['ema200'],'rsi':a['rsi'],'macd':a['macd'],'macd_signal':a['macd_signal'],'risk_plan':{'entry':entry,'stop_loss':sl,'tp1':tp1,'tp2':tp2},'plan_monitor':plan_monitor(a,entry,sl,tp1,tp2),'candle_pattern':candle_pattern(d),'timeframes':{'daily':a,'1h':hdata}}
+ sig_label, ready_label=entry_class(a)
+ return {'ticker':t,'sector':row.get('sector','IDX'),'close':close,'change_pct':a['change_pct'],'professional_score':score,'entry_probability':score,'signal_strength':score,'signal':sig(score),'entry_status':sig_label,'strategy':'TREND FOLLOWING' if a['trend']=='BULLISH' else 'WAIT / NO TRADE','mtf_alignment':a['trend'],'ema20':a['ema20'],'ema50':a['ema50'],'ema200':a['ema200'],'rsi':a['rsi'],'macd':a['macd'],'macd_signal':a['macd_signal'],'risk_plan':{'entry':entry,'stop_loss':sl,'tp1':tp1,'tp2':tp2},'plan_monitor':plan_monitor(a,entry,sl,tp1,tp2),'candle_pattern':candle_pattern(d),'signal_date':pd.Timestamp(d.index[-1]).strftime('%Y-%m-%d'),'timeframes':{'daily':a,'1h':hdata}}
+
+def load_log():
+ try:
+  with open(LOG_FILE,encoding='utf-8') as f:
+   x=json.load(f)
+   return x if isinstance(x,list) else []
+ except Exception: return []
+
+def candle_outcome_after(df, signal_date, sl, tp1, tp2):
+    """Evaluate candles strictly after signal_date. If multiple levels hit on one candle and order is unknowable, mark ambiguous."""
+    if df is None or df.empty: return {'status':'OPEN'}
+    for idx,row in df.iterrows():
+        d=pd.Timestamp(idx).strftime('%Y-%m-%d')
+        if d<=signal_date: continue
+        o,h,l,c=[float(row[k]) for k in ('Open','High','Low','Close')]
+        cl=l<=sl; p2=h>=tp2; p1=h>=tp1
+        if cl and p2:
+            if o<=sl: return {'status':'CL','date':d,'price':sl,'note':'CL dan TP2 tersentuh pada candle yang sama; open mengindikasikan CL lebih dulu'}
+            if o>=tp2: return {'status':'TP2','date':d,'price':tp2,'note':'TP2 lebih dulu berdasarkan open candle'}
+            return {'status':'AMBIGUOUS','date':d,'price':None,'note':'CL dan TP2 sama-sama tersentuh pada candle yang sama; urutan intraday tidak diketahui dari data harian'}
+        if cl: return {'status':'CL','date':d,'price':sl,'note':'CL tersentuh'}
+        if p2: return {'status':'TP2','date':d,'price':tp2,'note':'TP2 tersentuh'}
+        if p1: return {'status':'TP1','date':d,'price':tp1,'note':'TP1 tersentuh'}
+    return {'status':'OPEN'}
+
+def update_plan_log(stocks, raw_by_ticker):
+    logs=load_log(); bykey={f"{x.get('ticker')}|{x.get('signal_date')}":x for x in logs}
+    now=datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
+    for s in stocks:
+        t=s.get('ticker'); sd=s.get('signal_date')
+        if not t or not sd or s.get('stale'): continue
+        status=s.get('entry_status','')
+        if status not in ('ENTRY NOW','READY'): continue
+        p=s.get('risk_plan',{}); key=f'{t}|{sd}'
+        item=bykey.get(key)
+        if item is None:
+            item={'id':key,'ticker':t,'sector':s.get('sector','IDX'),'signal_date':sd,'logged_at':now,
+                  'signal':status,'algo_score':s.get('professional_score'), 'candle_pattern':s.get('candle_pattern',{}),
+                  'entry':p.get('entry'),'cl':p.get('stop_loss'),'tp1':p.get('tp1'),'tp2':p.get('tp2'),
+                  'outcome':'OPEN','outcome_date':None,'outcome_price':None,'outcome_note':None}
+            bykey[key]=item
+        df=raw_by_ticker.get(t)
+        if item.get('outcome') not in ('TP2','CL','AMBIGUOUS'):
+            o=candle_outcome_after(df, sd, float(item['cl']), float(item['tp1']), float(item['tp2'])) if df is not None else {'status':'OPEN'}
+            if o['status']!='OPEN':
+                item['outcome']=o['status']; item['outcome_date']=o.get('date'); item['outcome_price']=o.get('price'); item['outcome_note']=o.get('note')
+    out=sorted(bykey.values(),key=lambda x:(x.get('signal_date',''),x.get('ticker','')),reverse=True)
+    # keep a bounded journal while preserving useful history
+    out=out[:2000]
+    return out
 
 def main():
  with open(DB_FILE,encoding='utf-8') as f: rows=[x for x in json.load(f).get('emiten',[]) if x.get('active',True) and x.get('ticker')]
@@ -122,7 +182,14 @@ def main():
   ih=dl('^JKSE','2y','1d'); x=analyze(ih); market_score=x['score']; ihsg={**x,'ticker':'^JKSE','name':'IHSG / IDX Composite','market_signal':market_score,'signal':('MARKET SUPPORTIVE' if market_score>=70 else 'MARKET CAUTION' if market_score>=50 else 'MARKET RISK'),'updated_at':datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')}
  except Exception as e: ihsg={'ticker':'^JKSE','status':'unavailable','error':str(e)}
  stocks.sort(key=lambda x:x.get('professional_score',0),reverse=True)
- data={'schema_version':'4.0','engine':'IDX TERMINAL PRO V4.0 Market + Plan Outcome Monitor + Independent Candle Monitor','last_updated':datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB'),'database_total':len(rows),'success_total':fresh,'failed_total':len(failed),'failed':failed,'ihsg':ihsg,'all_stocks':stocks,'stocks':stocks,'top_10_entry':stocks[:10],'total_emiten':len(stocks)}
+ raw_by_ticker={}
+ for s in stocks:
+  if s.get('stale') or s.get('entry_status') not in ('ENTRY NOW','READY'): continue
+  try: raw_by_ticker[s['ticker']]=dl(s['ticker']+'.JK','2y','1d')
+  except Exception: pass
+ plan_log=update_plan_log(stocks,raw_by_ticker)
+ with open(LOG_FILE,'w',encoding='utf-8') as f: json.dump(clean(plan_log),f,ensure_ascii=False,indent=2,allow_nan=False)
+ data={'schema_version':'4.1','engine':'IDX TERMINAL PRO V4.1 Market + Plan Performance Log + Independent Candle Monitor','last_updated':datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB'),'plan_log_total':len(plan_log),'engine':'IDX TERMINAL PRO V4.0 Market + Plan Outcome Monitor + Independent Candle Monitor','last_updated':datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB'),'database_total':len(rows),'success_total':fresh,'failed_total':len(failed),'failed':failed,'ihsg':ihsg,'all_stocks':stocks,'stocks':stocks,'top_10_entry':stocks[:10],'total_emiten':len(stocks)}
  data=clean(data); fd,tmp=tempfile.mkstemp(prefix='data_',suffix='.json'); os.close(fd)
  with open(tmp,'w',encoding='utf-8') as f: json.dump(data,f,ensure_ascii=False,indent=2,allow_nan=False)
  os.replace(tmp,OUT_FILE); print('UPDATE OK:',fresh,'/',len(rows),'| IHSG',ihsg.get('close','unavailable'))
