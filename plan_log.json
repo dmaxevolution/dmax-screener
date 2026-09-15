@@ -69,6 +69,29 @@
     "outcome_note": null
   },
   {
+    "id": "PTBA|2026-09-15",
+    "ticker": "PTBA",
+    "sector": "Energy",
+    "signal_date": "2026-09-15",
+    "logged_at": "2026-09-15 03:45:32 WIB",
+    "signal": "READY",
+    "algo_score": 78,
+    "candle_pattern": {
+      "name": "THREE BLACK CROWS",
+      "bias": "BEARISH",
+      "impact": "HIGH",
+      "note": "Tekanan jual beruntun; pola reversal/peringatan kuat"
+    },
+    "entry": 2811.118096305169,
+    "cl": 2530.006286674652,
+    "tp1": 3373.3417155662023,
+    "tp2": 3654.453525196719,
+    "outcome": "OPEN",
+    "outcome_date": null,
+    "outcome_price": null,
+    "outcome_note": null
+  },
+  {
     "id": "MEDS|2026-09-15",
     "ticker": "MEDS",
     "sector": "Healthcare",
